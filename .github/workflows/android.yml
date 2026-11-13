@@ -27,7 +27,7 @@ jobs:
 
       - name: Install Android SDK command-line tools
         run: |
-          set -euo pipefail
+          set -eu
           export ANDROID_HOME="$RUNNER_TEMP/android-sdk"
           mkdir -p "$ANDROID_HOME/cmdline-tools"
           curl -fL --retry 3 https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip -o "$RUNNER_TEMP/android-cmdline-tools.zip"
