@@ -11,6 +11,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -114,7 +116,7 @@ private fun IpNetApp() {
         primary = Red, background = Bg, surface = Panel,
         onBackground = Color.White, onSurface = Color.White
     )) {
-        Box(Modifier.fillMaxSize().background(Bg)) {
+        Box(Modifier.fillMaxSize().background(Bg).windowInsetsPadding(WindowInsets.safeDrawing)) {
             Image(
                 painter = painterResource(id = R.drawable.ipnet_logo),
                 contentDescription = null,
@@ -132,7 +134,10 @@ private fun IpNetApp() {
                     }
                     TextButton(onClick = { menuOpen = !menuOpen }) { Text(if (menuOpen) "✕" else "☰", color = Color.White, fontSize = 28.sp) }
                 }
-                Column(Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 14.dp)) {
+                Column(
+                    Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 14.dp)
+                        .then(if (!connected) Modifier.imePadding().verticalScroll(rememberScrollState()) else Modifier)
+                ) {
                 Spacer(Modifier.height(4.dp))
                 if (!connected) {
                     Text("Conectare la panou", fontSize = 20.sp, fontWeight = FontWeight.Bold)
