@@ -1,0 +1,33 @@
+name: Native Android source checks (no APK)
+
+on:
+  push:
+    branches: [ qgs-ipnet-rebrand ]
+    paths:
+      - 'settings.gradle.kts'
+      - 'build.gradle.kts'
+      - 'gradle.properties'
+      - 'app/**'
+      - '.github/workflows/native-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile-source-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Install Android SDK platform
+        run: sdkmanager "platforms;android-35"
+      - name: Compile Kotlin source only (no APK packaging)
+        run: gradle :app:compileDebugKotlin --no-daemon
