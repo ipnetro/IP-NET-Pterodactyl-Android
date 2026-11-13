@@ -1,18 +1,18 @@
 package ro.ipnet.hosting
 
 import android.os.Bundle
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.core.view.WindowInsetsControllerCompat
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -20,291 +20,817 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import okhttp3.WebSocket
+import com.google.gson.JsonObject
+import androidx.compose.ui.window.Dialog
 
-private val IpNetBlack = Color(0xFF090A0D)
-private val IpNetPanel = Color(0xFF151820)
-private val IpNetRed = Color(0xFFF32643)
-private val IpNetMuted = Color(0xFF9AA0AC)
-private val IpNetWhite = Color(0xFFF4F5F7)
+private val Bg = Color(0xFF090A0D)
+private val Panel = Color(0xFF151820)
+private val Red = Color(0xFFF32643)
+private val Muted = Color(0xFF9AA0AC)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = android.graphics.Color.rgb(9, 10, 13)
-        window.navigationBarColor = android.graphics.Color.rgb(9, 10, 13)
-        WindowInsetsControllerCompat(window, window.decorView).apply {
-            isAppearanceLightStatusBars = false
-            isAppearanceLightNavigationBars = false
-        }
-        setContent { IpNetHostingApp() }
+        setContent { IpNetApp() }
     }
 }
 
 @Composable
-private fun IpNetHostingApp(vm: HostingViewModel = viewModel()) {
-    val state by vm.state.collectAsState()
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = IpNetRed,
-            background = IpNetBlack,
-            surface = IpNetPanel,
-            onPrimary = Color.White,
-            onBackground = IpNetWhite,
-            onSurface = IpNetWhite
-        )
-    ) {
-        LaunchedEffect(state.connected) {
-            while (state.connected) {
-                delay(15_000)
-                vm.refresh()
-            }
+private fun IpNetApp() {
+    val context = LocalContext.current
+    var apiKey by remember { mutableStateOf("") }
+    var menuOpen by remember { mutableStateOf(false) }
+    var connected by remember { mutableStateOf(false) }
+    var servers by remember { mutableStateOf<List<GameServer>>(emptyList()) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var api by remember { mutableStateOf<PterodactylApi?>(null) }
+    var consoleServer by remember { mutableStateOf<GameServer?>(null) }
+    var infoServer by remember { mutableStateOf<GameServer?>(null) }
+    var filesServer by remember { mutableStateOf<GameServer?>(null) }
+    var fileDirectory by remember { mutableStateOf("/") }
+    var serverFiles by remember { mutableStateOf<List<ServerFile>>(emptyList()) }
+    var filesLoading by remember { mutableStateOf(false) }
+    var filesError by remember { mutableStateOf<String?>(null) }
+    var managementServer by remember { mutableStateOf<GameServer?>(null) }
+    var managementSection by remember { mutableStateOf("BACKUP-URI") }
+    var editorFile by remember { mutableStateOf<String?>(null) }
+    var editorContent by remember { mutableStateOf("") }
+    var folderDialog by remember { mutableStateOf(false) }
+    var folderName by remember { mutableStateOf("") }
+    var fileActionTarget by remember { mutableStateOf<ServerFile?>(null) }
+    var renameValue by remember { mutableStateOf("") }
+    var consoleCommand by remember { mutableStateOf("") }
+    val consoleLines = remember { mutableStateListOf<String>() }
+    var consoleSocket by remember { mutableStateOf<WebSocket?>(null) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(filesServer, fileDirectory, api) {
+        val selected = filesServer
+        val client = api
+        if (selected != null && client != null) {
+            filesLoading = true
+            filesError = null
+            try { serverFiles = client.listFiles(selected.identifier, fileDirectory) }
+            catch (e: Exception) { filesError = e.message ?: "Nu pot încărca fișierele."; serverFiles = emptyList() }
+            finally { filesLoading = false }
         }
-        Surface(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing), color = IpNetBlack) {
-            Column(
-                Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 14.dp)
-            ) {
-                Header(connected = state.connected, onRefresh = vm::refresh)
-                Spacer(Modifier.height(22.dp))
-                if (!state.connected) {
-                    LoginPanel(
-                        loading = state.loading,
-                        error = state.error,
-                        onConnect = vm::connect
+    }
+
+    DisposableEffect(consoleServer, api) {
+        val job = if (consoleServer != null && api != null) scope.launch {
+            consoleLines.clear()
+            try {
+                val credentials = api!!.consoleCredentials(consoleServer!!.identifier)
+                consoleSocket = api!!.connectConsole(credentials, { line ->
+                    scope.launch { consoleLines.add(line); if (consoleLines.size > 400) consoleLines.removeAt(0) }
+                }, { message ->
+                    scope.launch { consoleLines.add(message) }
+                })
+            } catch (e: Exception) {
+                consoleLines.add("Eroare: ${e.message ?: "conectare eșuată"}")
+            }
+        } else null
+        onDispose {
+            job?.cancel()
+            consoleSocket?.close(1000, "Închidere consolă")
+            consoleSocket = null
+        }
+    }
+
+    MaterialTheme(colorScheme = darkColorScheme(
+        primary = Red, background = Bg, surface = Panel,
+        onBackground = Color.White, onSurface = Color.White
+    )) {
+        Box(Modifier.fillMaxSize().background(Bg)) {
+            Image(
+                painter = painterResource(id = R.drawable.ipnet_logo),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.align(Alignment.Center).size(310.dp).alpha(0.10f)
+            )
+            Surface(Modifier.fillMaxSize(), color = Color.Transparent) {
+            Column(Modifier.fillMaxSize()) {
+                Row(Modifier.fillMaxWidth().background(Color(0xFF07090D)).padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Image(painter = painterResource(id = R.drawable.ipnet_logo), contentDescription = "IP-NET Hosting", contentScale = ContentScale.Fit, modifier = Modifier.size(58.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("IP-NET", color = Red, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text("HOSTING", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    }
+                    TextButton(onClick = { menuOpen = !menuOpen }) { Text(if (menuOpen) "✕" else "☰", color = Color.White, fontSize = 28.sp) }
+                }
+                Column(Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 14.dp)) {
+                Spacer(Modifier.height(4.dp))
+                if (!connected) {
+                    Text("Conectare la panou", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Text("https://ptero.ip-net.ro", color = Muted)
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = apiKey, onValueChange = { apiKey = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Client API Key") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Red, focusedLabelColor = Red,
+                            unfocusedBorderColor = Muted
+                        )
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            if (apiKey.isBlank()) { error = "Introdu cheia Client API din panou."; return@Button }
+                            busy = true; error = null
+                            scope.launch {
+                                try {
+                                    val candidate = PterodactylApi(apiKey.trim())
+                                    servers = candidate.servers()
+                                    api = candidate
+                                    connected = true
+                                } catch (e: Exception) { error = e.message ?: "Conectare eșuată." }
+                                finally { busy = false }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Red)
+                    ) { Text(if (busy) "Se conectează..." else "CONECTARE") }
+                    Text(
+                        "Cheia API este folosită doar în memoria aplicației și nu este salvată.",
+                        color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp)
                     )
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Serverele mele", color = IpNetWhite, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            Text("Panou Pterodactyl IP-NET", color = IpNetMuted, fontSize = 13.sp)
+                            Text("Serverele mele", fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                            Text("${servers.size} server(e) disponibile", color = Muted, fontSize = 12.sp)
                         }
-                        Text(
-                            "${state.servers.size} servere",
-                            color = IpNetRed,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
+                        TextButton(onClick = {
+                            connected = false; api = null; apiKey = ""; servers = emptyList()
+                        }) { Text("Ieșire", color = Red) }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(servers, key = { it.identifier }) { server ->
+                            ServerCard(server, busy, api, onInfo = { infoServer = server }, onConsole = { consoleServer = server }, onFiles = { filesServer = server; fileDirectory = "/" }, onManage = { managementServer = server }, onPower = { action ->
+                                scope.launch {
+                                    busy = true; error = null
+                                    try {
+                                        api?.power(server.identifier, action)
+                                        servers = api?.servers().orEmpty()
+                                    } catch (e: Exception) { error = e.message ?: "Comanda a eșuat." }
+                                    finally { busy = false }
+                                }
+                            })
+                        }
+                    }
+                    if (infoServer != null) ServerInfoDialog(infoServer!!, api!!, onDismiss = { infoServer = null })
+                    if (managementServer != null) {
+                        ManagementDialog(server = managementServer!!, api = api!!, initialSection = managementSection, onDismiss = { managementServer = null })
+                    }
+                    if (filesServer != null) {
+                        Dialog(onDismissRequest = { filesServer = null }) {
+                            Column(Modifier.fillMaxWidth().fillMaxHeight(0.82f).background(Panel, RoundedCornerShape(16.dp)).padding(16.dp)) {
+                                Text("MANAGER FIȘIERE", color = Red, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(filesServer!!.name, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                                Text(fileDirectory, color = Muted, fontSize = 11.sp)
+                                Spacer(Modifier.height(10.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = { folderDialog = true }, colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)) { Text("DOSAR NOU") }
+                                    OutlinedButton(onClick = {
+                                        if (fileDirectory != "/") fileDirectory = fileDirectory.substringBeforeLast('/', "").ifBlank { "/" }
+                                    }, enabled = fileDirectory != "/", colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("ÎNAPOI") }
+                                    OutlinedButton(onClick = {
+                                        val selected = filesServer
+                                        val client = api
+                                        if (selected != null && client != null) scope.launch {
+                                            filesLoading = true
+                                            runCatching { client.listFiles(selected.identifier, fileDirectory) }
+                                                .onSuccess { serverFiles = it; filesError = null }
+                                                .onFailure { filesError = it.message ?: "Reîncărcare eșuată" }
+                                            filesLoading = false
+                                        }
+                                    }, colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)) { Text("REÎNCARCĂ") }
+                                }
+                                filesError?.let { Text(it, color = Color(0xFFFF687D), fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp)) }
+                                if (filesLoading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
+                                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    items(serverFiles, key = { it.name }) { entry ->
+                                        Row(Modifier.fillMaxWidth().background(Bg, RoundedCornerShape(8.dp)).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            Text(if (entry.isFile) "📄" else "📁", fontSize = 18.sp)
+                                            Spacer(Modifier.width(10.dp))
+                                            Column(Modifier.weight(1f)) {
+                                                Text(entry.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                                Text(if (entry.isFile) formatFileSize(entry.sizeBytes) else "Dosar", color = Muted, fontSize = 10.sp)
+                                            }
+                                            if (!entry.isFile) TextButton(onClick = {
+                                                fileDirectory = if (fileDirectory == "/") "/" + entry.name else fileDirectory + "/" + entry.name
+                                            }) { Text("DESCHIDE", color = Red, fontSize = 10.sp) }
+                                            else TextButton(onClick = {
+                                                val selected = filesServer
+                                                val client = api
+                                                if (selected != null && client != null) scope.launch {
+                                                    runCatching { client.readFile(selected.identifier, if (fileDirectory == "/") "/${entry.name}" else "$fileDirectory/${entry.name}") }
+                                                        .onSuccess { editorFile = if (fileDirectory == "/") "/${entry.name}" else "$fileDirectory/${entry.name}"; editorContent = it }
+                                                        .onFailure { filesError = it.message ?: "Nu pot deschide fișierul." }
+                                                }
+                                            }) { Text("EDITEAZĂ", color = Red, fontSize = 10.sp) }
+                                            TextButton(onClick = { fileActionTarget = entry; renameValue = entry.name }) {
+                                                Text("MAI MULT", color = Muted, fontSize = 9.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                                TextButton(onClick = { filesServer = null }, modifier = Modifier.align(Alignment.End)) { Text("ÎNCHIDE", color = Red) }
+                            }
+                        }
+                    }
+
+
+                    if (fileActionTarget != null && filesServer != null) {
+                        val target = fileActionTarget!!
+                        AlertDialog(
+                            onDismissRequest = { fileActionTarget = null },
+                            title = { Text(target.name) },
+                            text = {
+                                Column {
+                                    OutlinedTextField(value = renameValue, onValueChange = { renameValue = it }, label = { Text("Redenumește") }, singleLine = true)
+                                    Text(if (target.isFile) "Fișier" else "Dosar", color = Muted, fontSize = 11.sp)
+                                }
+                            },
+                            confirmButton = {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    if (target.isFile) {
+                                        TextButton(onClick = {
+                                            val selected = filesServer
+                                            val client = api
+                                            if (selected != null && client != null) scope.launch {
+                                                runCatching {
+                                                    val path = if (fileDirectory == "/") "/${target.name}" else "$fileDirectory/${target.name}"
+                                                    val url = client.signedFileDownload(selected.identifier, path)
+                                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                                }.onFailure { filesError = it.message ?: "Descărcarea nu a putut fi pornită." }
+                                            }
+                                        }) { Text("DESCARCĂ", color = Color(0xFF55D68B), fontSize = 10.sp) }
+                                    }
+                                    TextButton(onClick = {
+                                        val selected = filesServer
+                                        val client = api
+                                        val newName = renameValue.trim()
+                                        if (selected != null && client != null && newName.isNotBlank() && newName != target.name) scope.launch {
+                                            runCatching { client.renameFile(selected.identifier, fileDirectory, target.name, newName) }
+                                                .onSuccess { serverFiles = client.listFiles(selected.identifier, fileDirectory); filesError = "Element redenumit." }
+                                                .onFailure { filesError = it.message ?: "Redenumirea a eșuat." }
+                                            fileActionTarget = null
+                                        }
+                                    }) { Text("REDENUMIRE", color = Red) }
+                                    if (target.isFile && target.name.substringAfterLast('.', "").lowercase() in setOf("zip", "tar", "gz")) {
+                                        TextButton(onClick = {
+                                            val selected = filesServer
+                                            val client = api
+                                            if (selected != null && client != null) scope.launch {
+                                                runCatching { client.decompressFile(selected.identifier, fileDirectory, target.name) }
+                                                    .onSuccess { serverFiles = client.listFiles(selected.identifier, fileDirectory); filesError = "Arhiva a fost extrasă." }
+                                                    .onFailure { filesError = it.message ?: "Extragerea arhivei a eșuat." }
+                                                fileActionTarget = null
+                                            }
+                                        }) { Text("EXTRAGE", color = Color(0xFF55D68B), fontSize = 10.sp) }
+                                    }
+                                    if (target.isFile && target.name.substringAfterLast('.', "").lowercase() !in setOf("zip", "tar", "gz")) {
+                                        TextButton(onClick = {
+                                            val selected = filesServer
+                                            val client = api
+                                            if (selected != null && client != null) scope.launch {
+                                                runCatching { client.compressFiles(selected.identifier, fileDirectory, listOf(target.name)) }
+                                                    .onSuccess { serverFiles = client.listFiles(selected.identifier, fileDirectory); filesError = "Arhivarea a fost solicitată." }
+                                                    .onFailure { filesError = it.message ?: "Arhivarea a eșuat." }
+                                                fileActionTarget = null
+                                            }
+                                        }) { Text("ARHIVEAZĂ", color = Color(0xFF55D68B), fontSize = 10.sp) }
+                                    }
+                                    TextButton(onClick = {
+                                        val selected = filesServer
+                                        val client = api
+                                        if (selected != null && client != null) scope.launch {
+                                            runCatching { client.deleteFiles(selected.identifier, fileDirectory, listOf(target.name)) }
+                                                .onSuccess { serverFiles = client.listFiles(selected.identifier, fileDirectory); filesError = "Element șters." }
+                                                .onFailure { filesError = it.message ?: "Ștergerea a eșuat." }
+                                            fileActionTarget = null
+                                        }
+                                    }) { Text("ȘTERGE", color = Color(0xFFFF687D)) }
+                                }
+                            },
+                            dismissButton = { TextButton(onClick = { fileActionTarget = null }) { Text("ANULEAZĂ") } },
+                            containerColor = Panel,
+                            titleContentColor = Color.White,
+                            textContentColor = Color.White
                         )
                     }
-                    Spacer(Modifier.height(14.dp))
-                    state.error?.let {
-                        ErrorBanner(it)
-                        Spacer(Modifier.height(10.dp))
+                    if (folderDialog && filesServer != null) {
+                        AlertDialog(
+                            onDismissRequest = { folderDialog = false },
+                            title = { Text("Dosar nou") },
+                            text = { OutlinedTextField(value = folderName, onValueChange = { folderName = it }, label = { Text("Numele dosarului") }, singleLine = true) },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    val selected = filesServer
+                                    val client = api
+                                    val name = folderName.trim()
+                                    if (selected != null && client != null && name.isNotBlank()) scope.launch {
+                                        runCatching { client.createFolder(selected.identifier, fileDirectory, name) }
+                                            .onSuccess { filesError = null; serverFiles = client.listFiles(selected.identifier, fileDirectory) }
+                                            .onFailure { filesError = it.message ?: "Crearea dosarului a eșuat." }
+                                        folderName = ""
+                                        folderDialog = false
+                                    }
+                                }) { Text("CREEAZĂ", color = Red) }
+                            },
+                            dismissButton = { TextButton(onClick = { folderDialog = false }) { Text("ANULEAZĂ") } },
+                            containerColor = Panel,
+                            titleContentColor = Color.White,
+                            textContentColor = Color.White
+                        )
                     }
-                    if (state.loading && state.servers.isEmpty()) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = IpNetRed)
-                        }
-                    } else if (state.servers.isEmpty()) {
-                        EmptyPanel(onDisconnect = vm::disconnect)
-                    } else {
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            contentPadding = PaddingValues(bottom = 24.dp)
-                        ) {
-                            items(state.servers, key = { it.identifier }) { server ->
-                                ServerCard(
-                                    server = server,
-                                    busy = state.busyServer == server.identifier,
-                                    onPower = { signal -> vm.power(server.identifier, signal) }
+                    if (editorFile != null) {
+                        Dialog(onDismissRequest = { editorFile = null }) {
+                            Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).background(Panel, RoundedCornerShape(16.dp)).padding(14.dp)) {
+                                Text("EDITOR FIȘIER", color = Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Text(editorFile!!, color = Color.White, fontSize = 14.sp)
+                                OutlinedTextField(
+                                    value = editorContent, onValueChange = { editorContent = it },
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Red, unfocusedBorderColor = Muted)
                                 )
-                            }
-                            item {
-                                TextButton(onClick = vm::disconnect) {
-                                    Text("Deconectare", color = IpNetMuted)
+                                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                                    TextButton(onClick = { editorFile = null }) { Text("ANULEAZĂ", color = Muted) }
+                                    Button(onClick = {
+                                        val selected = filesServer
+                                        val client = api
+                                        val path = editorFile
+                                        if (selected != null && client != null && path != null) scope.launch {
+                                            runCatching { client.writeFile(selected.identifier, path, editorContent) }
+                                                .onSuccess { filesError = "Fișier salvat cu succes."; editorFile = null }
+                                                .onFailure { filesError = it.message ?: "Salvarea a eșuat." }
+                                        }
+                                    }, colors = ButtonDefaults.buttonColors(containerColor = Red)) { Text("SALVEAZĂ") }
                                 }
                             }
                         }
                     }
+                    if (consoleServer != null) {
+                        Dialog(onDismissRequest = { consoleServer = null }) {
+                            Column(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(16.dp)).padding(16.dp)) {
+                                Text("Consolă • ${consoleServer!!.name}", fontWeight = FontWeight.Bold, color = Color.White)
+                                Spacer(Modifier.height(8.dp))
+                                Column(Modifier.fillMaxWidth().height(280.dp).background(Bg, RoundedCornerShape(8.dp)).padding(8.dp)) {
+                                    LazyColumn(Modifier.fillMaxSize()) {
+                                        items(consoleLines) { line -> Text(line, color = Color(0xFFB8C0CC), fontSize = 10.sp) }
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    OutlinedTextField(value = consoleCommand, onValueChange = { consoleCommand = it }, modifier = Modifier.weight(1f), singleLine = true, label = { Text("Comandă") })
+                                    Button(onClick = {
+                                        val command = consoleCommand.trim()
+                                        if (command.isNotEmpty()) {
+                                            val payload = com.google.gson.JsonObject().apply {
+                                                addProperty("event", "send command")
+                                                add("args", com.google.gson.JsonArray().apply { add(command) })
+                                            }
+                                            consoleSocket?.send(payload.toString())
+                                            consoleCommand = ""
+                                        }
+                                    }, colors = ButtonDefaults.buttonColors(containerColor = Red)) { Text("TRIMITE") }
+                                }
+                                TextButton(onClick = { consoleServer = null }, modifier = Modifier.align(Alignment.End)) { Text("ÎNCHIDE", color = Red) }
+                            }
+                        }
+                    }
                 }
+                error?.let {
+                    Spacer(Modifier.height(12.dp))
+                    Text(it, color = Color(0xFFFF687D), fontSize = 13.sp)
+                }
+                }
+                if (connected) {
+                    Row(Modifier.fillMaxWidth().background(Color(0xFF10151D)).padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = { menuOpen = false }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("▤", color = Red, fontSize = 22.sp); Text("My Servers", color = Color.White, fontSize = 11.sp) } }
+                        TextButton(onClick = { menuOpen = true }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("♙", color = Muted, fontSize = 22.sp); Text("Account", color = Color.White, fontSize = 11.sp) } }
+                        TextButton(onClick = { connected = false; api = null; apiKey = ""; servers = emptyList() }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("⇥", color = Muted, fontSize = 22.sp); Text("Log Out", color = Color.White, fontSize = 11.sp) } }
+                    }
+                }
+                if (menuOpen) {
+                    Dialog(onDismissRequest = { menuOpen = false }) {
+                        Column(Modifier.fillMaxWidth().background(Color(0xFF111923), RoundedCornerShape(12.dp)).padding(12.dp)) {
+                            Text("IP-NET HOSTING", color = Red, fontWeight = FontWeight.Bold, modifier = Modifier.padding(10.dp))
+                            listOf("DASHBOARD", "MY SERVERS", "CONSOLE", "FILE MANAGER", "SERVER CONFIG", "SETTINGS", "DATABASES", "SCHEDULES", "ACCESS CONTROL", "BACKUPS", "NETWORK", "TOOLS").forEach { item ->
+                                TextButton(onClick = {
+                                    menuOpen = false
+                                    val selected = servers.firstOrNull()
+                                    when (item) {
+                                        "DASHBOARD", "MY SERVERS" -> Unit
+                                        "CONSOLE" -> if (selected != null) consoleServer = selected
+                                        "FILE MANAGER" -> if (selected != null) { filesServer = selected; fileDirectory = "/" }
+                                        "DATABASES" -> if (selected != null) { managementSection = "BAZE DE DATE"; managementServer = selected }
+                                        "SCHEDULES" -> if (selected != null) { managementSection = "SCHEDULES"; managementServer = selected }
+                                        "ACCESS CONTROL" -> if (selected != null) { managementSection = "UTILIZATORI"; managementServer = selected }
+                                        "BACKUPS" -> if (selected != null) { managementSection = "BACKUP-URI"; managementServer = selected }
+                                        "NETWORK" -> if (selected != null) { managementSection = "REȚEA"; managementServer = selected }
+                                        "SERVER CONFIG", "SETTINGS", "TOOLS" -> if (selected != null) {
+                                            managementSection = item
+                                            managementServer = selected
+                                        }
+                                    }
+                                }, modifier = Modifier.fillMaxWidth()) { Text(item, color = Color.White, modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.SemiBold) }
+                            }
+                        }
+                    }
+                }
+
+            }
             }
         }
     }
 }
 
 @Composable
-private fun Header(connected: Boolean, onRefresh: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Image(
-            painter = painterResource(R.drawable.ipnet_logo),
-            contentDescription = "IP-NET",
-            modifier = Modifier.size(42.dp)
-        )
-        Spacer(Modifier.width(11.dp))
-        Column(Modifier.weight(1f)) {
-            Text("IP-NET", color = IpNetWhite, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
-            Text("HOSTING CONTROL", color = IpNetMuted, fontSize = 9.sp, letterSpacing = 1.5.sp)
-        }
-        if (connected) {
-            TextButton(onClick = onRefresh) { Text("REÎNNOIEȘTE", color = IpNetRed, fontSize = 11.sp) }
-        } else {
-            Box(Modifier.size(8.dp).background(IpNetRed, CircleShape))
+private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, onInfo: () -> Unit, onConsole: () -> Unit, onFiles: () -> Unit, onManage: () -> Unit, onPower: (String) -> Unit) {
+    var stats by remember(server.identifier) { mutableStateOf<ResourceStats?>(null) }
+    LaunchedEffect(server.identifier, api) {
+        while (api != null) {
+            runCatching { api.resourceStats(server.identifier) }.onSuccess { stats = it }
+            delay(5_000)
         }
     }
-}
-
-@Composable
-private fun LoginPanel(loading: Boolean, error: String?, onConnect: (String) -> Unit) {
-    var apiKey by remember { mutableStateOf("") }
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .imePadding()
-            .verticalScroll(rememberScrollState())
-            .background(IpNetPanel, RoundedCornerShape(22.dp))
-            .padding(20.dp)
-    ) {
-        Text("Conectare la panou", color = IpNetWhite, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(6.dp))
-        Text("Introdu cheia Client API din contul tău Pterodactyl.", color = IpNetMuted, fontSize = 13.sp)
-        Spacer(Modifier.height(22.dp))
-        Text("ADRESA PANOU", color = IpNetMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        Spacer(Modifier.height(6.dp))
-        Text(
-            "https://ptero.ip-net.ro",
-            color = IpNetWhite,
-            modifier = Modifier.fillMaxWidth().background(IpNetBlack, RoundedCornerShape(12.dp)).padding(14.dp),
-            fontSize = 14.sp
-        )
-        Spacer(Modifier.height(16.dp))
-        Text("CLIENT API KEY", color = IpNetMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        Spacer(Modifier.height(6.dp))
-        OutlinedTextField(
-            value = apiKey,
-            onValueChange = { apiKey = it },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("ptlc_…", color = IpNetMuted) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = IpNetRed,
-                unfocusedBorderColor = Color(0xFF343945),
-                focusedTextColor = IpNetWhite,
-                unfocusedTextColor = IpNetWhite,
-                cursorColor = IpNetRed
-            )
-        )
-        Spacer(Modifier.height(16.dp))
-        error?.let { ErrorBanner(it); Spacer(Modifier.height(12.dp)) }
-        Button(
-            onClick = { onConnect(apiKey.trim()) },
-            enabled = !loading && apiKey.isNotBlank(),
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = IpNetRed),
-            shape = RoundedCornerShape(13.dp)
-        ) {
-            if (loading) CircularProgressIndicator(Modifier.size(19.dp), color = Color.White, strokeWidth = 2.dp)
-            else Text("CONECTARE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        }
-        Spacer(Modifier.height(14.dp))
-        Text(
-            "Cheia API este păstrată doar în memoria aplicației și nu este salvată pe telefon.",
-            color = IpNetMuted,
-            fontSize = 11.sp,
-            lineHeight = 16.sp
-        )
-    }
-}
-
-@Composable
-private fun ErrorBanner(message: String) {
-    Text(
-        message,
-        color = Color(0xFFFF9AA8),
-        fontSize = 12.sp,
-        modifier = Modifier.fillMaxWidth().background(Color(0xFF35141D), RoundedCornerShape(10.dp)).padding(12.dp)
-    )
-}
-
-@Composable
-private fun EmptyPanel(onDisconnect: () -> Unit) {
-    Column(
-        Modifier.fillMaxWidth().background(IpNetPanel, RoundedCornerShape(18.dp)).padding(22.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Nu există servere în acest cont.", color = IpNetWhite, fontWeight = FontWeight.SemiBold)
-        Text("Verifică permisiunile Client API din panou.", color = IpNetMuted, fontSize = 12.sp)
-        TextButton(onClick = onDisconnect) { Text("Deconectare", color = IpNetRed) }
-    }
-}
-
-@Composable
-private fun ServerCard(server: ServerUi, busy: Boolean, onPower: (String) -> Unit) {
-    val running = server.status.equals("running", true)
-    val statusColor = if (running) Color(0xFF35C98A) else IpNetMuted
-    Column(
-        Modifier.fillMaxWidth().background(IpNetPanel, RoundedCornerShape(18.dp)).padding(16.dp)
-    ) {
+    val running = stats?.state == "running" || server.status == "running"
+    val memoryUsed = stats?.memoryBytes?.div(1024L * 1024L) ?: 0L
+    val diskUsed = stats?.diskBytes?.div(1024L * 1024L) ?: 0L
+    Column(Modifier.fillMaxWidth().background(Color(0xFF121B26), RoundedCornerShape(10.dp)).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(server.name, color = IpNetWhite, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                if (server.description.isNotBlank()) {
-                    Text(server.description, color = IpNetMuted, fontSize = 11.sp, maxLines = 1)
-                }
+                Text(server.name.uppercase(), fontSize = 19.sp, fontWeight = FontWeight.Black, color = Color.White)
+                Text(server.identifier, color = Color(0xFF43B5F5), fontSize = 12.sp)
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(7.dp).background(statusColor, CircleShape))
-                Spacer(Modifier.width(6.dp))
-                Text(server.status.uppercase(), color = statusColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            }
+            Text(if (server.isSuspended) "SUSPENDED" else if (running) "● ONLINE" else "● OFFLINE",
+                color = if (running && !server.isSuspended) Color(0xFF43D6A1) else Red, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = { onPower("start") }, enabled = !busy && !server.isSuspended, modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF168FD0))) { Text("▶") }
+            Button(onClick = { onPower("restart") }, enabled = !busy && !server.isSuspended, modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFBD16), contentColor = Color.Black)) { Text("⟳") }
+            Button(onClick = { onPower("stop") }, enabled = !busy && !server.isSuspended, modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE9444D))) { Text("■") }
         }
         Spacer(Modifier.height(16.dp))
-        UsageLine("CPU", server.cpuText)
-        UsageLine("MEMORIE", server.memoryText)
-        UsageLine("DISC", server.diskText)
+        Text("CPU  ${"%.1f".format(stats?.cpuPercent ?: 0.0)}% / ${server.cpu}%", color = Color.White, fontSize = 12.sp)
+        LinearProgressIndicator(progress = { ((stats?.cpuPercent ?: 0.0) / server.cpu.coerceAtLeast(1)).toFloat().coerceIn(0f,1f) },
+            modifier = Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF3978E8), trackColor = Color(0xFF263241))
+        Spacer(Modifier.height(9.dp))
+        Text("MEMORY  $memoryUsed MB / ${server.memory} MB", color = Color.White, fontSize = 12.sp)
+        LinearProgressIndicator(progress = { (memoryUsed.toFloat() / server.memory.coerceAtLeast(1)).coerceIn(0f,1f) },
+            modifier = Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF24C777), trackColor = Color(0xFF263241))
+        Spacer(Modifier.height(9.dp))
+        Text("STORAGE  $diskUsed MB / ${server.disk} MB", color = Color.White, fontSize = 12.sp)
+        LinearProgressIndicator(progress = { (diskUsed.toFloat() / (server.disk.coerceAtLeast(1) * 1_048_576f)).coerceIn(0f,1f) },
+            modifier = Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF22B7E9), trackColor = Color(0xFF263241))
         Spacer(Modifier.height(14.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            when {
-                running -> {
-                    PowerButton("STOP", enabled = !busy, onClick = { onPower("stop") }, modifier = Modifier.weight(1f), danger = true)
-                    PowerButton("RESTART", enabled = !busy, onClick = { onPower("restart") }, modifier = Modifier.weight(1f))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = onInfo, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)) { Text("INFO", fontSize = 10.sp) }
+            OutlinedButton(onClick = onConsole, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("CONSOLE", fontSize = 10.sp) }
+            OutlinedButton(onClick = onFiles, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("FILES", fontSize = 10.sp) }
+            OutlinedButton(onClick = onManage, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)) { Text("MANAGE", fontSize = 10.sp) }
+        }
+    }
+}
+
+@Composable
+private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSection: String, onDismiss: () -> Unit) {
+    var section by remember(server.identifier, initialSection) { mutableStateOf(initialSection) }
+    var rows by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var backupName by remember { mutableStateOf("") }
+    var databaseName by remember { mutableStateOf("") }
+    var scheduleName by remember { mutableStateOf("") }
+    var scheduleCron by remember { mutableStateOf("*/5 * * * *") }
+    val scope = rememberCoroutineScope()
+
+    fun refresh() {
+        scope.launch {
+            loading = true
+            message = null
+            try {
+                rows = when (section) {
+                    "BACKUP-URI" -> api.backups(server.identifier)
+                    "BAZE DE DATE" -> api.databases(server.identifier)
+                    "SCHEDULES" -> api.schedules(server.identifier)
+                    "UTILIZATORI" -> api.subusers(server.identifier)
+                    "REȚEA" -> api.allocations(server.identifier)
+                    else -> emptyList()
                 }
-                server.status.equals("offline", true) -> {
-                    PowerButton("START", enabled = !busy, onClick = { onPower("start") }, modifier = Modifier.weight(1f))
+            } catch (e: Exception) {
+                rows = emptyList()
+                message = e.message ?: "Nu pot încărca secțiunea."
+            } finally { loading = false }
+        }
+    }
+
+    LaunchedEffect(section, server.identifier) { refresh() }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().fillMaxHeight(0.84f)
+                .background(Panel, RoundedCornerShape(18.dp)).padding(16.dp)
+        ) {
+            Text("CONTROL SERVER", color = Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(server.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("BACKUP-URI", "BAZE DE DATE", "SCHEDULES").forEach { tab ->
+                    TextButton(onClick = { section = tab }) {
+                        Text(tab, color = if (section == tab) Red else Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
-                else -> {
-                    Text("Comandă indisponibilă cât timp serverul este ${server.status}.", color = IpNetMuted, fontSize = 11.sp)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("UTILIZATORI", "REȚEA").forEach { tab ->
+                    TextButton(onClick = { section = tab }) {
+                        Text(tab, color = if (section == tab) Red else Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = { refresh() }) { Text("ACTUALIZEAZĂ", color = Color.White, fontSize = 9.sp) }
+            }
+            Divider(color = Muted.copy(alpha = 0.25f))
+            if (section in setOf("SERVER CONFIG", "SETTINGS", "TOOLS")) {
+                Text(
+                    when (section) {
+                        "SERVER CONFIG" -> "Setările de configurare ale serverului nu sunt expuse de Client API pentru acest cont. Nu afișăm controale false."
+                        "SETTINGS" -> "Setările aplicației și ale conexiunii sunt gestionate separat. Cheia API nu este salvată."
+                        else -> "Instrumentele disponibile depind de permisiunile serverului. Funcțiile indisponibile nu vor fi simulate."
+                    },
+                    color = Muted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 12.dp)
+                )
+            }
+            if (section == "BACKUP-URI") {
+                OutlinedTextField(
+                    value = backupName, onValueChange = { backupName = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    label = { Text("Nume backup (opțional)") }
+                )
+                Button(
+                    onClick = {
+                        scope.launch {
+                            loading = true
+                            runCatching { api.createBackup(server.identifier, backupName.trim()) }
+                                .onSuccess { message = "Backup-ul a fost solicitat."; backupName = ""; refresh() }
+                                .onFailure { message = it.message ?: "Crearea backup-ului a eșuat." }
+                            loading = false
+                        }
+                    },
+                    enabled = !loading, modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Red)
+                ) { Text("CREEAZĂ BACKUP") }
+            }
+            if (section == "SCHEDULES") {
+                OutlinedTextField(value = scheduleName, onValueChange = { scheduleName = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Numele programării") })
+                OutlinedTextField(value = scheduleCron, onValueChange = { scheduleCron = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    label = { Text("Cron: minută oră zi-lună lună zi-săptămână") },
+                    supportingText = { Text("Exemplu: */5 * * * * (la fiecare 5 minute)") })
+                Button(onClick = {
+                    scope.launch {
+                        loading = true
+                        runCatching { api.createSchedule(server.identifier, scheduleName.trim(), scheduleCron) }
+                            .onSuccess { message = "Programarea a fost creată."; scheduleName = ""; refresh() }
+                            .onFailure { message = it.message ?: "Crearea programării a eșuat." }
+                        loading = false
+                    }
+                }, enabled = !loading && scheduleName.isNotBlank() && scheduleCron.trim().split(Regex("\\s+")).size == 5,
+                    modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Red)
+                ) { Text("CREEAZĂ PROGRAMARE") }
+            }
+            if (section == "BAZE DE DATE") {
+                OutlinedTextField(
+                    value = databaseName, onValueChange = { databaseName = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    label = { Text("Nume bază de date") }
+                )
+                Button(
+                    onClick = {
+                        scope.launch {
+                            loading = true
+                            runCatching { api.createDatabase(server.identifier, databaseName.trim()) }
+                                .onSuccess { message = "Cererea de creare a bazei de date a fost trimisă."; databaseName = ""; refresh() }
+                                .onFailure { message = it.message ?: "Crearea bazei de date a eșuat." }
+                            loading = false
+                        }
+                    },
+                    enabled = !loading && databaseName.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Red)
+                ) { Text("ADAUGĂ BAZĂ DE DATE") }
+            }
+            message?.let { Text(it, color = if (it.contains("eșuat") || it.contains("Nu pot")) Color(0xFFFF687D) else Color(0xFF55D68B), fontSize = 11.sp, modifier = Modifier.padding(vertical = 6.dp)) }
+            if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(rows.size) { index ->
+                    val row = rows[index]
+                    val label = row.get("name")?.takeUnless { it.isJsonNull }?.asString
+                        ?: row.get("database")?.takeUnless { it.isJsonNull }?.asString
+                        ?: row.get("uuid")?.takeUnless { it.isJsonNull }?.asString
+                        ?: row.get("id")?.takeUnless { it.isJsonNull }?.asString
+                        ?: "Element ${index + 1}"
+                    val detail = row.entrySet().take(5).joinToString(" • ") { (key, value) ->
+                        "$key: ${value.toString().trim('"')}"
+                    }
+                    Column(Modifier.fillMaxWidth().background(Bg, RoundedCornerShape(10.dp)).padding(12.dp)) {
+                        Text(label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(detail, color = Muted, fontSize = 10.sp)
+                        if (section == "SCHEDULES") {
+                            val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                            TextButton(onClick = {
+                                scope.launch {
+                                    runCatching { api.deleteSchedule(server.identifier, id) }
+                                        .onSuccess { message = "Programarea a fost ștearsă."; refresh() }
+                                        .onFailure { message = it.message ?: "Ștergerea programării a eșuat." }
+                                }
+                            }, enabled = id.isNotBlank()) { Text("ȘTERGE PROGRAMAREA", color = Red, fontSize = 10.sp) }
+                        }
+                        if (section == "BACKUP-URI") {
+                            val id = row.get("uuid")?.asString.orEmpty()
+                            TextButton(
+                                onClick = {
+                                    scope.launch {
+                                        runCatching { api.deleteBackup(server.identifier, id) }
+                                            .onSuccess { message = "Backup șters."; refresh() }
+                                            .onFailure { message = it.message ?: "Ștergerea a eșuat." }
+                                    }
+                                },
+                                enabled = id.isNotBlank()
+                            ) { Text("ȘTERGE BACKUP", color = Red, fontSize = 10.sp) }
+                        }
+                        if (section == "BAZE DE DATE") {
+                            val id = row.get("id")?.asString.orEmpty()
+                            TextButton(
+                                onClick = {
+                                    scope.launch {
+                                        runCatching { api.rotateDatabasePassword(server.identifier, id) }
+                                            .onSuccess { message = "Parola bazei de date a fost rotită. Verifică detaliile în panou."; refresh() }
+                                            .onFailure { message = it.message ?: "Rotirea parolei a eșuat." }
+                                    }
+                                },
+                                enabled = id.isNotBlank()
+                            ) { Text("ROTEȘTE PAROLA", color = Red, fontSize = 10.sp) }
+                        }
+                    }
+                }
+            }
+            if (rows.isEmpty() && !loading && message == null) {
+                Text("Nu există elemente sau API-ul nu oferă acces la această secțiune.", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
+            }
+            TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+                Text("ÎNCHIDE", color = Red)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ServerInfoDialog(server: GameServer, api: PterodactylApi, onDismiss: () -> Unit) {
+    var stats by remember(server.identifier) { mutableStateOf<ResourceStats?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val cpuHistory = remember(server.identifier) { mutableStateListOf<Float>() }
+    val memoryHistory = remember(server.identifier) { mutableStateListOf<Float>() }
+
+    LaunchedEffect(server.identifier) {
+        loading = true
+        while (true) {
+            runCatching { api.resourceStats(server.identifier) }
+                .onSuccess { value ->
+                    stats = value
+                    cpuHistory.add(value.cpuPercent.toFloat().coerceIn(0f, 100f))
+                    memoryHistory.add(
+                        if (server.memory > 0) (value.memoryBytes.toFloat() / (server.memory * 1024f * 1024f) * 100f).coerceIn(0f, 100f) else 0f
+                    )
+                    if (cpuHistory.size > 24) cpuHistory.removeAt(0)
+                    if (memoryHistory.size > 24) memoryHistory.removeAt(0)
+                    error = null
+                }
+                .onFailure { error = it.message ?: "Statisticile nu sunt disponibile." }
+            loading = false
+            delay(5000)
+        }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().fillMaxHeight(0.84f)
+                .background(Panel, RoundedCornerShape(18.dp)).padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp)
+        ) {
+            Text("SERVER INFORMATION", color = Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(server.name, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
+            Text(server.identifier, color = Muted, fontSize = 12.sp)
+            HorizontalDivider(color = Color(0xFF303642))
+            InfoLine("STATUS", if (server.isSuspended) "SUSPENDED" else stats?.state?.uppercase() ?: server.status?.uppercase() ?: "UNKNOWN")
+            InfoLine("DESCRIPTION", server.description.ifBlank { "—" })
+            InfoLine("CPU LIMIT", "${server.cpu}%")
+            InfoLine("MEMORY LIMIT", "${server.memory} MB")
+            InfoLine("DISK LIMIT", "${server.disk} MB")
+            HorizontalDivider(color = Color(0xFF303642))
+            Text("LIVE RESOURCE USAGE", color = Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            InfoLine("CPU", stats?.let { "%.1f%%".format(it.cpuPercent) } ?: "—")
+            ResourceHistoryChart("CPU HISTORY", cpuHistory, Red)
+            InfoLine("MEMORY", stats?.let { formatFileSize(it.memoryBytes) } ?: "—")
+            ResourceHistoryChart("MEMORY HISTORY", memoryHistory, Color(0xFF24C777))
+            InfoLine("STORAGE", stats?.let { formatFileSize(it.diskBytes) } ?: "—")
+            InfoLine("UPTIME", stats?.let { formatUptime(it.uptimeMillis) } ?: "—")
+            if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
+            error?.let { Text(it, color = Color(0xFFFF687D), fontSize = 11.sp) }
+            Text("Actualizare automată la 5 secunde", color = Muted, fontSize = 10.sp)
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("CLOSE", color = Red) }
+        }
+    }
+}
+
+@Composable
+private fun ResourceHistoryChart(label: String, values: List<Float>, lineColor: Color) {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(label, color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Canvas(Modifier.fillMaxWidth().height(42.dp)) {
+            val points = values
+            if (points.size >= 2) {
+                val stepX = size.width / (points.size - 1).toFloat()
+                for (i in 0 until points.lastIndex) {
+                    val y1 = size.height - (points[i] / 100f * size.height)
+                    val y2 = size.height - (points[i + 1] / 100f * size.height)
+                    drawLine(
+                        color = lineColor,
+                        start = Offset(i * stepX, y1),
+                        end = Offset((i + 1) * stepX, y2),
+                        strokeWidth = 3.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
                 }
             }
         }
-        if (busy) {
-            Spacer(Modifier.height(8.dp))
-            LinearProgressIndicator(Modifier.fillMaxWidth(), color = IpNetRed, trackColor = Color(0xFF303541))
-        }
     }
 }
 
 @Composable
-private fun UsageLine(label: String, value: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = IpNetMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(78.dp))
-        Text(value, color = IpNetWhite, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+private fun InfoLine(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+        Text(label, color = Muted, fontSize = 11.sp, modifier = Modifier.weight(0.9f))
+        Text(value, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1.1f))
     }
 }
 
+private fun formatUptime(milliseconds: Long): String {
+    if (milliseconds <= 0L) return "—"
+    val totalSeconds = milliseconds / 1000L
+    val days = totalSeconds / 86400L
+    val hours = (totalSeconds % 86400L) / 3600L
+    val minutes = (totalSeconds % 3600L) / 60L
+    return if (days > 0) "${days}d ${hours}h ${minutes}m" else "${hours}h ${minutes}m"
+}
+
 @Composable
-private fun PowerButton(
-    label: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    danger: Boolean = false
-) {
+private fun PowerButton(label: String, action: String, enabled: Boolean, onPower: (String) -> Unit) {
     OutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.height(42.dp),
-        shape = RoundedCornerShape(10.dp),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = if (danger) IpNetRed else IpNetWhite),
-        border = BorderStroke(1.dp, if (danger) IpNetRed else Color(0xFF454B58))
-    ) {
-        Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-    }
+        onClick = { onPower(action) }, enabled = enabled,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)
+    ) { Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+}
+
+private fun formatFileSize(bytes: Long): String = when {
+    bytes >= 1024L * 1024L * 1024L -> "%.2f GB".format(bytes / (1024.0 * 1024.0 * 1024.0))
+    bytes >= 1024L * 1024L -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
+    bytes >= 1024L -> "%.1f KB".format(bytes / 1024.0)
+    else -> "$bytes B"
 }
