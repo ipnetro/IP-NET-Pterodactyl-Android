@@ -78,6 +78,24 @@ private fun IpNetApp() {
     val consoleLines = remember { mutableStateListOf<String>() }
     var consoleSocket by remember { mutableStateOf<WebSocket?>(null) }
     val scope = rememberCoroutineScope()
+    val logout = {
+        connected = false
+        api = null
+        apiKey = ""
+        servers = emptyList()
+        menuOpen = false
+        consoleServer = null
+        infoServer = null
+        filesServer = null
+        fileDirectory = "/"
+        serverFiles = emptyList()
+        managementServer = null
+        editorFile = null
+        fileActionTarget = null
+        folderDialog = false
+        consoleCommand = ""
+        consoleLines.clear()
+    }
 
     LaunchedEffect(filesServer, fileDirectory, api) {
         val selected = filesServer
@@ -185,7 +203,7 @@ private fun IpNetApp() {
                             Text("${servers.size} server(e) disponibile", color = Muted, fontSize = 12.sp)
                         }
                         TextButton(onClick = {
-                            connected = false; api = null; apiKey = ""; servers = emptyList()
+                            logout()
                         }) { Text("Ieșire", color = Red) }
                     }
                     Spacer(Modifier.height(12.dp))
@@ -437,7 +455,7 @@ private fun IpNetApp() {
                         horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = { menuOpen = false }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("▤", color = Red, fontSize = 22.sp); Text("My Servers", color = Color.White, fontSize = 11.sp) } }
                         TextButton(onClick = { menuOpen = true }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("♙", color = Muted, fontSize = 22.sp); Text("Account", color = Color.White, fontSize = 11.sp) } }
-                        TextButton(onClick = { connected = false; api = null; apiKey = ""; servers = emptyList() }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("⇥", color = Muted, fontSize = 22.sp); Text("Log Out", color = Color.White, fontSize = 11.sp) } }
+                        TextButton(onClick = { logout() }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("⇥", color = Muted, fontSize = 22.sp); Text("Log Out", color = Color.White, fontSize = 11.sp) } }
                     }
                 }
                 if (menuOpen) {
