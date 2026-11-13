@@ -54,6 +54,15 @@ jobs:
           test -f qgs-ipnet-modified-source.zip
           unzip -q qgs-ipnet-modified-source.zip -d "$RUNNER_TEMP/qgs-src"
           test -f "$RUNNER_TEMP/qgs-src/qgs-ipnet-modified/AndroidManifest.xml"
+          # Convert the extracted base APK into a standalone installable APK.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("$RUNNER_TEMP/qgs-src/qgs-ipnet-modified/AndroidManifest.xml")
+          s = p.read_text()
+          s = s.replace(' android:requiredSplitTypes="base__density"', '')
+          s = s.replace(' android:splitTypes=""', '')
+          p.write_text(s)
+          PY
 
       - name: Build unsigned APK
         run: |
