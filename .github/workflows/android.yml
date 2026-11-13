@@ -1,15 +1,8 @@
 name: Build QGS-based IP-NET Hosting APK
 
+# Manual-only while source inspection and app behavior are being completed.
+# This prevents intermediate APK builds on every source change.
 on:
-  push:
-    branches: [ qgs-ipnet-rebrand ]
-    paths:
-      - '.github/workflows/android.yml'
-      - 'qgs-ipnet-modified-source.zip'
-      - 'ipnet_hosting_logo.png'
-      - 'scripts/**'
-      - 'qgs-ipnet-rebrand/**'
-      - 'app/**'
   workflow_dispatch:
 
 permissions:
