@@ -249,11 +249,17 @@ private fun ServerCard(server: ServerUi, busy: Boolean, onPower: (String) -> Uni
         UsageLine("DISC", server.diskText)
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (!running) {
-                PowerButton("START", enabled = !busy, onClick = { onPower("start") }, modifier = Modifier.weight(1f))
-            } else {
-                PowerButton("STOP", enabled = !busy, onClick = { onPower("stop") }, modifier = Modifier.weight(1f), danger = true)
-                PowerButton("RESTART", enabled = !busy, onClick = { onPower("restart") }, modifier = Modifier.weight(1f))
+            when {
+                running -> {
+                    PowerButton("STOP", enabled = !busy, onClick = { onPower("stop") }, modifier = Modifier.weight(1f), danger = true)
+                    PowerButton("RESTART", enabled = !busy, onClick = { onPower("restart") }, modifier = Modifier.weight(1f))
+                }
+                server.status.equals("offline", true) -> {
+                    PowerButton("START", enabled = !busy, onClick = { onPower("start") }, modifier = Modifier.weight(1f))
+                }
+                else -> {
+                    Text("Comandă indisponibilă cât timp serverul este ${server.status}.", color = IpNetMuted, fontSize = 11.sp)
+                }
             }
         }
         if (busy) {
