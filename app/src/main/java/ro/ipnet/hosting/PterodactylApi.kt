@@ -38,8 +38,11 @@ class PterodactylApi {
             totalPages = json.optJSONObject("meta")
                 ?.optJSONObject("pagination")
                 ?.optInt("total_pages", 1) ?: 1
+            if (totalPages > MAX_SERVER_PAGES) {
+                throw IllegalStateException("Contul are prea multe pagini de servere (maximum acceptat: $MAX_SERVER_PAGES).")
+            }
             page++
-        } while (page <= totalPages.coerceAtMost(MAX_SERVER_PAGES))
+        } while (page <= totalPages)
         result
     }
 
