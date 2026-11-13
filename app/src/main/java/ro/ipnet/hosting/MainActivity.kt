@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import okhttp3.WebSocket
+import androidx.compose.ui.window.Dialog
 
 private val Bg = Color(0xFF090A0D)
 private val Panel = Color(0xFF151820)
@@ -42,7 +44,32 @@ private fun IpNetApp() {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var api by remember { mutableStateOf<PterodactylApi?>(null) }
+    var consoleServer by remember { mutableStateOf<GameServer?>(null) }
+    var consoleCommand by remember { mutableStateOf("") }
+    val consoleLines = remember { mutableStateListOf<String>() }
+    var consoleSocket by remember { mutableStateOf<WebSocket?>(null) }
     val scope = rememberCoroutineScope()
+
+    DisposableEffect(consoleServer, api) {
+        val job = if (consoleServer != null && api != null) scope.launch {
+            consoleLines.clear()
+            try {
+                val credentials = api!!.consoleCredentials(consoleServer!!.identifier)
+                consoleSocket = api!!.connectConsole(credentials, { line ->
+                    scope.launch { consoleLines.add(line); if (consoleLines.size > 400) consoleLines.removeAt(0) }
+                }, { message ->
+                    scope.launch { consoleLines.add(message) }
+                })
+            } catch (e: Exception) {
+                consoleLines.add("Eroare: ${e.message ?: "conectare eșuată"}")
+            }
+        } else null
+        onDispose {
+            job?.cancel()
+            consoleSocket?.close(1000, "Închidere consolă")
+            consoleSocket = null
+        }
+    }
 
     MaterialTheme(colorScheme = darkColorScheme(
         primary = Red, background = Bg, surface = Panel,
@@ -108,7 +135,7 @@ private fun IpNetApp() {
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(servers, key = { it.identifier }) { server ->
-                            ServerCard(server, busy, api, onPower = { action ->
+                            ServerCard(server, busy, api, onConsole = { consoleServer = server }, onPower = { action ->
                                 scope.launch {
                                     busy = true; error = null
                                     try {
@@ -118,6 +145,35 @@ private fun IpNetApp() {
                                     finally { busy = false }
                                 }
                             })
+                        }
+                    }
+                    if (consoleServer != null) {
+                        Dialog(onDismissRequest = { consoleServer = null }) {
+                            Column(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(16.dp)).padding(16.dp)) {
+                                Text("Consolă • ${consoleServer!!.name}", fontWeight = FontWeight.Bold, color = Color.White)
+                                Spacer(Modifier.height(8.dp))
+                                Column(Modifier.fillMaxWidth().height(280.dp).background(Bg, RoundedCornerShape(8.dp)).padding(8.dp)) {
+                                    LazyColumn(Modifier.fillMaxSize()) {
+                                        items(consoleLines) { line -> Text(line, color = Color(0xFFB8C0CC), fontSize = 10.sp) }
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    OutlinedTextField(value = consoleCommand, onValueChange = { consoleCommand = it }, modifier = Modifier.weight(1f), singleLine = true, label = { Text("Comandă") })
+                                    Button(onClick = {
+                                        val command = consoleCommand.trim()
+                                        if (command.isNotEmpty()) {
+                                            val payload = com.google.gson.JsonObject().apply {
+                                                addProperty("event", "send command")
+                                                add("args", com.google.gson.JsonArray().apply { add(command) })
+                                            }
+                                            consoleSocket?.send(payload.toString())
+                                            consoleCommand = ""
+                                        }
+                                    }, colors = ButtonDefaults.buttonColors(containerColor = Red)) { Text("TRIMITE") }
+                                }
+                                TextButton(onClick = { consoleServer = null }, modifier = Modifier.align(Alignment.End)) { Text("ÎNCHIDE", color = Red) }
+                            }
                         }
                     }
                 }
@@ -131,7 +187,7 @@ private fun IpNetApp() {
 }
 
 @Composable
-private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, onPower: (String) -> Unit) {
+private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, onConsole: () -> Unit, onPower: (String) -> Unit) {
     var stats by remember(server.identifier) { mutableStateOf<ResourceStats?>(null) }
     LaunchedEffect(server.identifier, api) {
         while (api != null) {
@@ -165,6 +221,7 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
             PowerButton("START", "start", !busy && !server.isSuspended, onPower)
             PowerButton("STOP", "stop", !busy && !server.isSuspended, onPower)
             PowerButton("RESTART", "restart", !busy && !server.isSuspended, onPower)
+            OutlinedButton(onClick = onConsole, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("CONSOLA", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
         }
     }
 }
