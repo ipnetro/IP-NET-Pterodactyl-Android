@@ -57,7 +57,7 @@ jobs:
           # Convert the extracted base APK into a standalone installable APK.
           python3 - <<'PY'
           from pathlib import Path
-          p = Path("$RUNNER_TEMP/qgs-src/qgs-ipnet-modified/AndroidManifest.xml")
+          p = Path(__import__("os").environ["RUNNER_TEMP"]) / "qgs-src/qgs-ipnet-modified/AndroidManifest.xml"
           s = p.read_text()
           s = s.replace(' android:requiredSplitTypes="base__density"', '')
           s = s.replace(' android:splitTypes=""', '')
