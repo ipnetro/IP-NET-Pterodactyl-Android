@@ -36,3 +36,15 @@ dependencies {
     implementation("com.google.code.gson:gson:2.11.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
+
+
+// Decode the approved IP-NET mark into an Android drawable before resource processing.
+val decodeIpnetLogo by tasks.registering {
+    doLast {
+        val encoded = layout.projectDirectory.file("src/main/ipnet_logo.b64").asFile.readText().trim()
+        val output = layout.projectDirectory.file("src/main/res/drawable-nodpi/ipnet_logo.png").asFile
+        output.parentFile.mkdirs()
+        output.writeBytes(java.util.Base64.getDecoder().decode(encoded))
+    }
+}
+tasks.named("preBuild").configure { dependsOn(decodeIpnetLogo) }
