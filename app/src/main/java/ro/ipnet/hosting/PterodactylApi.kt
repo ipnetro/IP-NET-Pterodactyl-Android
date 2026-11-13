@@ -49,14 +49,14 @@ class PterodactylApi(private val apiKey: String) {
         .build()
     private val baseUrl = "https://ptero.ip-net.ro"
 
-    private suspend fun request(path: String, method: String = "GET", body: String? = null): String =
+    private suspend fun request(path: String, method: String = "GET", body: String? = null, contentType: String = "application/json"): String =
         withContext(Dispatchers.IO) {
             val builder = Request.Builder()
                 .url(baseUrl + path)
                 .header("Authorization", "Bearer $apiKey")
                 .header("Accept", "Application/vnd.pterodactyl.v1+json")
-                .header("Content-Type", "application/json")
-            val requestBody = body?.toRequestBody("application/json".toMediaType())
+                .header("Content-Type", contentType)
+            val requestBody = body?.toRequestBody(contentType.toMediaType())
             when (method.uppercase()) {
                 "POST" -> builder.post(requestBody ?: "{}".toRequestBody("application/json".toMediaType()))
                 "PUT" -> builder.put(requestBody ?: "{}".toRequestBody("application/json".toMediaType()))
@@ -204,10 +204,10 @@ class PterodactylApi(private val apiKey: String) {
     }
 
     suspend fun readFile(identifier: String, file: String): String =
-        request(serverPath(identifier, "files/contents?file=\${enc(file)}"))
+        request(serverPath(identifier, "files/contents?file=${enc(file)}"))
 
     suspend fun writeFile(identifier: String, file: String, content: String) {
-        request(serverPath(identifier, "files/write?file=\${enc(file)}"), "POST", content)
+        request(serverPath(identifier, "files/write?file=${enc(file)}"), "POST", content, "text/plain")
     }
 
     suspend fun createFolder(identifier: String, directory: String, name: String) {
@@ -275,7 +275,7 @@ class PterodactylApi(private val apiKey: String) {
     suspend fun allocations(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "network/allocations"))
 
     suspend fun signedFileDownload(identifier: String, file: String): String {
-        val root = JsonParser.parseString(request(serverPath(identifier, "files/download?file=\${enc(file)}"))).asJsonObject
+        val root = JsonParser.parseString(request(serverPath(identifier, "files/download?file=${enc(file)}"))).asJsonObject
         return root.getAsJsonObject("attributes").get("url").asString
     }
 
