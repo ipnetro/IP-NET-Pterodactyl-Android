@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +15,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -100,11 +104,29 @@ private fun IpNetApp() {
         primary = Red, background = Bg, surface = Panel,
         onBackground = Color.White, onSurface = Color.White
     )) {
-        Surface(Modifier.fillMaxSize(), color = Bg) {
+        Box(Modifier.fillMaxSize().background(Bg)) {
+            Image(
+                painter = painterResource(id = R.drawable.ipnet_logo),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.align(Alignment.Center).size(310.dp).alpha(0.10f)
+            )
+            Surface(Modifier.fillMaxSize(), color = Color.Transparent) {
             Column(Modifier.fillMaxSize().padding(20.dp)) {
-                Text("IP-NET", color = Red, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                Text("HOSTING", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black)
-                Text("Pterodactyl Control Panel", color = Muted, fontSize = 13.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ipnet_logo),
+                        contentDescription = "IP-NET",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(54.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text("IP-NET", color = Red, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text("HOSTING", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                        Text("Pterodactyl Control Panel", color = Muted, fontSize = 13.sp)
+                    }
+                }
                 Spacer(Modifier.height(24.dp))
 
                 if (!connected) {
@@ -361,6 +383,7 @@ private fun IpNetApp() {
                     Spacer(Modifier.height(12.dp))
                     Text(it, color = Color(0xFFFF687D), fontSize = 13.sp)
                 }
+            }
             }
         }
     }
