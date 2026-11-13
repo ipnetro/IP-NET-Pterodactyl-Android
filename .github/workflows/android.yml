@@ -25,8 +25,11 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK build tools
-        uses: android-actions/setup-android@v3
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platform-tools" "build-tools;36.0.0"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
 
       - name: Install Apktool 3.0.3
         run: |
@@ -48,14 +51,14 @@ jobs:
 
       - name: Align and sign APK
         run: |
-          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n1)"
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
           test -x "$BUILD_TOOLS/zipalign"
           test -x "$BUILD_TOOLS/apksigner"
           "$BUILD_TOOLS/zipalign" -f -v 4 "$RUNNER_TEMP/IP-NET-Hosting-unsigned.apk" "$RUNNER_TEMP/IP-NET-Hosting-aligned.apk"
           keytool -genkeypair -v -keystore "$RUNNER_TEMP/ipnet-debug.keystore" -storepass android -keypass android -alias ipnet -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=IP-NET Hosting, OU=Android, O=IP-NET, L=Antwerp, ST=Antwerp, C=BE"
           "$BUILD_TOOLS/apksigner" sign --ks "$RUNNER_TEMP/ipnet-debug.keystore" --ks-pass pass:android --key-pass pass:android --out "$RUNNER_TEMP/IP-NET-Hosting-debug.apk" "$RUNNER_TEMP/IP-NET-Hosting-aligned.apk"
           "$BUILD_TOOLS/apksigner" verify --verbose "$RUNNER_TEMP/IP-NET-Hosting-debug.apk"
-          "$ANDROID_HOME/build-tools/$(basename "$BUILD_TOOLS")/aapt" dump badging "$RUNNER_TEMP/IP-NET-Hosting-debug.apk" | head -n 5
+          "$BUILD_TOOLS/aapt" dump badging "$RUNNER_TEMP/IP-NET-Hosting-debug.apk" | head -n 5
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
