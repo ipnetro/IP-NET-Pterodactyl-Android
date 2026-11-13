@@ -15,6 +15,14 @@ import java.util.concurrent.TimeUnit
 
 data class ConsoleCredentials(val socket: String, val token: String)
 
+data class ServerFile(
+    val name: String,
+    val isFile: Boolean,
+    val sizeBytes: Long,
+    val modifiedAt: String,
+    val mimeType: String
+)
+
 data class ResourceStats(
     val state: String,
     val memoryBytes: Long,
@@ -162,6 +170,21 @@ class PterodactylApi(private val apiKey: String) {
                 onClosed("Consolă închisă: $reason")
             }
         })
+    }
+
+    suspend fun listFiles(identifier: String, directory: String = "/"): List<ServerFile> {
+        val encoded = java.net.URLEncoder.encode(directory, Charsets.UTF_8.name()).replace("+", "%20")
+        val root = JsonParser.parseString(request("/api/client/servers/$identifier/files/list?directory=$encoded")).asJsonObject
+        return root.getAsJsonArray("data").map { item ->
+            val a = item.asJsonObject.getAsJsonObject("attributes")
+            ServerFile(
+                name = a.get("name")?.asString.orEmpty(),
+                isFile = a.get("is_file")?.asBoolean ?: true,
+                sizeBytes = a.get("size")?.asLong ?: 0L,
+                modifiedAt = a.get("modified_at")?.takeUnless { it.isJsonNull }?.asString.orEmpty(),
+                mimeType = a.get("mimetype")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            )
+        }.sortedWith(compareBy<ServerFile> { it.isFile }.thenBy { it.name.lowercase() })
     }
 
     suspend fun resources(identifier: String): JsonObject =
