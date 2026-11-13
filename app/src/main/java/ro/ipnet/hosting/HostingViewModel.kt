@@ -3,8 +3,6 @@ package ro.ipnet.hosting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -88,11 +86,16 @@ class HostingViewModel : ViewModel() {
 
     private suspend fun loadServers(key: String): List<ServerUi> {
         val servers = api.getServers(key)
-        return servers.map { server ->
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                runCatching { api.getResources(key, server) }.getOrElse { server }
+        val updated = mutableListOf<ServerUi>()
+        for (server in servers) {
+            val refreshed = try {
+                api.getResources(key, server)
+            } catch (_: Exception) {
+                server
             }
+            updated += refreshed
         }
+        return updated
     }
 
     override fun onCleared() {
