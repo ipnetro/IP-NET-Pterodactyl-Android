@@ -1,34 +1,66 @@
-name: Android APK
+name: Build QGS-based IP-NET Hosting APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ qgs-ipnet-rebrand ]
+    paths:
+      - '.github/workflows/android.yml'
+      - 'qgs-ipnet-modified-source.zip'
+      - 'ipnet_hosting_logo.png'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  build-qgs-apk:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up JDK 17
+
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install Gradle 8.9
+
+      - name: Set up Android SDK build tools
+        uses: android-actions/setup-android@v3
+
+      - name: Install Apktool 3.0.3
         run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
-          unzip -q gradle-8.9-bin.zip -d "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
-      - name: Build debug APK
-        run: gradle assembleDebug
-      - name: Upload APK
+          curl -fL --retry 3 https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar -o "$RUNNER_TEMP/apktool.jar"
+          printf '#!/usr/bin/env bash\nexec java -jar "$RUNNER_TEMP/apktool.jar" "$@"\n' > "$RUNNER_TEMP/apktool"
+          chmod +x "$RUNNER_TEMP/apktool"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+          apktool --version
+
+      - name: Extract QGS modified source
+        run: |
+          test -f qgs-ipnet-modified-source.zip
+          unzip -q qgs-ipnet-modified-source.zip -d "$RUNNER_TEMP/qgs-src"
+          test -f "$RUNNER_TEMP/qgs-src/qgs-ipnet-modified/AndroidManifest.xml"
+
+      - name: Build unsigned APK
+        run: |
+          apktool b "$RUNNER_TEMP/qgs-src/qgs-ipnet-modified" -o "$RUNNER_TEMP/IP-NET-Hosting-unsigned.apk"
+
+      - name: Align and sign APK
+        run: |
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n1)"
+          test -x "$BUILD_TOOLS/zipalign"
+          test -x "$BUILD_TOOLS/apksigner"
+          "$BUILD_TOOLS/zipalign" -f -v 4 "$RUNNER_TEMP/IP-NET-Hosting-unsigned.apk" "$RUNNER_TEMP/IP-NET-Hosting-aligned.apk"
+          keytool -genkeypair -v -keystore "$RUNNER_TEMP/ipnet-debug.keystore" -storepass android -keypass android -alias ipnet -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=IP-NET Hosting, OU=Android, O=IP-NET, L=Antwerp, ST=Antwerp, C=BE"
+          "$BUILD_TOOLS/apksigner" sign --ks "$RUNNER_TEMP/ipnet-debug.keystore" --ks-pass pass:android --key-pass pass:android --out "$RUNNER_TEMP/IP-NET-Hosting-debug.apk" "$RUNNER_TEMP/IP-NET-Hosting-aligned.apk"
+          "$BUILD_TOOLS/apksigner" verify --verbose "$RUNNER_TEMP/IP-NET-Hosting-debug.apk"
+          "$ANDROID_HOME/build-tools/$(basename "$BUILD_TOOLS")/aapt" dump badging "$RUNNER_TEMP/IP-NET-Hosting-debug.apk" | head -n 5
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: IP-NET-Hosting-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: IP-NET-Hosting-QGS-debug
+          path: ${{ runner.temp }}/IP-NET-Hosting-debug.apk
           if-no-files-found: error
+          retention-days: 30
