@@ -483,7 +483,9 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
             delay(5_000)
         }
     }
-    val running = stats?.state == "running" || server.status == "running"
+    val liveState = stats?.state ?: server.status
+    val running = liveState.equals("running", ignoreCase = true)
+    val canStart = liveState.equals("offline", ignoreCase = true)
     val memoryUsed = stats?.memoryBytes?.div(1024L * 1024L) ?: 0L
     val diskUsed = stats?.diskBytes?.div(1024L * 1024L) ?: 0L
     Column(Modifier.fillMaxWidth().background(Color(0xFF121B26), RoundedCornerShape(10.dp)).padding(16.dp)) {
@@ -492,12 +494,17 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
                 Text(server.name.uppercase(), fontSize = 19.sp, fontWeight = FontWeight.Black, color = Color.White)
                 Text(server.identifier, color = Color(0xFF43B5F5), fontSize = 12.sp)
             }
-            Text(if (server.isSuspended) "SUSPENDED" else if (running) "● ONLINE" else "● OFFLINE",
-                color = if (running && !server.isSuspended) Color(0xFF43D6A1) else Red, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(
+                if (server.isSuspended) "SUSPENDED"
+                else liveState?.takeIf { it.isNotBlank() }?.uppercase() ?: "CHECKING",
+                color = if (running && !server.isSuspended) Color(0xFF43D6A1) else if (liveState == null) Muted else Red,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(onClick = { onPower("start") }, enabled = !busy && !server.isSuspended && !running, modifier = Modifier.weight(1f),
+            Button(onClick = { onPower("start") }, enabled = !busy && !server.isSuspended && canStart, modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF168FD0))) { Text("▶") }
             Button(onClick = { onPower("restart") }, enabled = !busy && !server.isSuspended && running, modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFBD16), contentColor = Color.Black)) { Text("⟳") }
