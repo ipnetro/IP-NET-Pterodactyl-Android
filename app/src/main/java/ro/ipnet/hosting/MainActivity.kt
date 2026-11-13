@@ -3,6 +3,7 @@ package ro.ipnet.hosting
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -283,9 +284,7 @@ private fun PowerButton(
         modifier = modifier.height(42.dp),
         shape = RoundedCornerShape(10.dp),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = if (danger) IpNetRed else IpNetWhite),
-        border = ButtonDefaults.outlinedButtonBorder.copy(
-            brush = androidx.compose.ui.graphics.SolidColor(if (danger) IpNetRed else Color(0xFF454B58))
-        )
+        border = BorderStroke(1.dp, if (danger) IpNetRed else Color(0xFF454B58))
     ) {
         Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
