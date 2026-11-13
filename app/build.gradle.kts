@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -49,4 +51,21 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
+}
+
+val decodeIpNetLogo by tasks.registering {
+    val source = layout.projectDirectory.file("src/main/ipnet_logo.b64")
+    val output = layout.projectDirectory.file("src/main/res/drawable-nodpi/ipnet_logo.png")
+    inputs.file(source)
+    outputs.file(output)
+    doLast {
+        val encoded = source.asFile.readText().filterNot(Char::isWhitespace)
+        val bytes = Base64.getDecoder().decode(encoded)
+        output.asFile.parentFile.mkdirs()
+        output.asFile.writeBytes(bytes)
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(decodeIpNetLogo)
 }
