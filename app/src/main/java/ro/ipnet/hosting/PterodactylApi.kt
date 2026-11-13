@@ -10,6 +10,14 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
+data class ResourceStats(
+    val state: String,
+    val memoryBytes: Long,
+    val diskBytes: Long,
+    val cpuPercent: Double,
+    val uptimeMillis: Long
+)
+
 data class GameServer(
     val identifier: String,
     val name: String,
@@ -82,4 +90,16 @@ class PterodactylApi(private val apiKey: String) {
 
     suspend fun resources(identifier: String): JsonObject =
         JsonParser.parseString(request("/api/client/servers/$identifier/resources")).asJsonObject
+
+    suspend fun resourceStats(identifier: String): ResourceStats {
+        val root = resources(identifier).getAsJsonObject("attributes")
+        val usage = root.getAsJsonObject("resources")
+        return ResourceStats(
+            state = root.get("current_state")?.takeUnless { it.isJsonNull }?.asString ?: "unknown",
+            memoryBytes = usage.get("memory_bytes")?.asLong ?: 0L,
+            diskBytes = usage.get("disk_bytes")?.asLong ?: 0L,
+            cpuPercent = usage.get("cpu_absolute")?.asDouble ?: 0.0,
+            uptimeMillis = usage.get("uptime")?.asLong ?: 0L
+        )
+    }
 }
