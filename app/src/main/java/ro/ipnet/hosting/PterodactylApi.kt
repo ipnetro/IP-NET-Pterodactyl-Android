@@ -44,7 +44,7 @@ class PterodactylApi(private val apiKey: String) {
                 if (!response.isSuccessful) {
                     val detail = runCatching {
                         JsonParser.parseString(text).asJsonObject
-                            .getAsJsonObject("errors")?.getAsJsonArray(0)
+                            .getAsJsonArray("errors")?.get(0)
                             ?.asJsonObject?.get("detail")?.asString
                     }.getOrNull()
                     throw IllegalStateException(detail ?: "Eroare API HTTP ${response.code}")
