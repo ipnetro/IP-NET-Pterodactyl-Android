@@ -3,6 +3,7 @@ package ro.ipnet.hosting
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -39,6 +40,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = android.graphics.Color.rgb(9, 10, 13)
         window.navigationBarColor = android.graphics.Color.rgb(9, 10, 13)
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
         setContent { IpNetHostingApp() }
     }
 }
@@ -62,7 +67,7 @@ private fun IpNetHostingApp(vm: HostingViewModel = viewModel()) {
                 vm.refresh()
             }
         }
-        Surface(Modifier.fillMaxSize(), color = IpNetBlack) {
+        Surface(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing), color = IpNetBlack) {
             Column(
                 Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 14.dp)
             ) {
