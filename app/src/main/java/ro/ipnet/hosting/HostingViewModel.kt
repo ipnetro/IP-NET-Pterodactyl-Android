@@ -16,7 +16,10 @@ data class ServerUi(
     val status: String,
     val cpuText: String = "—",
     val memoryText: String = "—",
-    val diskText: String = "—"
+    val diskText: String = "—",
+    val cpuLimit: Int = 0,
+    val memoryLimitBytes: Long = 0L,
+    val diskLimitBytes: Long = 0L
 )
 
 data class HostingState(
