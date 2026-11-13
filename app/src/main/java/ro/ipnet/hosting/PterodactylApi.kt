@@ -109,7 +109,10 @@ class PterodactylApi(private val apiKey: String) {
         onClosed: (String) -> Unit
     ): WebSocket {
         val wsClient = client.newBuilder().readTimeout(0, TimeUnit.MILLISECONDS).build()
-        val request = Request.Builder().url(credentials.socket).build()
+        val request = Request.Builder()
+            .url(credentials.socket)
+            .header("Origin", baseUrl)
+            .build()
         return wsClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: okhttp3.Response) {
                 val auth = JsonObject().apply {
@@ -125,7 +128,17 @@ class PterodactylApi(private val apiKey: String) {
                 runCatching {
                     val event = JsonParser.parseString(text).asJsonObject
                     when (event.get("event")?.asString) {
-                        "auth success" -> onLine("[Consolă conectată]")
+                        "auth success" -> {
+                            onLine("[Consolă conectată]")
+                            webSocket.send(JsonObject().apply {
+                                addProperty("event", "send logs")
+                                add("args", com.google.gson.JsonArray().apply { add(com.google.gson.JsonNull.INSTANCE) })
+                            }.toString())
+                            webSocket.send(JsonObject().apply {
+                                addProperty("event", "send stats")
+                                add("args", com.google.gson.JsonArray().apply { add(com.google.gson.JsonNull.INSTANCE) })
+                            }.toString())
+                        }
                         "console output" -> event.getAsJsonArray("args")?.forEach {
                             onLine(it.asString)
                         }
