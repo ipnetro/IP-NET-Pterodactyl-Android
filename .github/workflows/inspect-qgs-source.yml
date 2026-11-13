@@ -1,4 +1,4 @@
-name: Inspect QGS source (no APK)
+name: Inspect QGS decoded source (no APK build)
 
 on:
   push:
