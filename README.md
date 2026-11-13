@@ -5,24 +5,33 @@ Aplicație Android nativă pentru administrarea serverelor din panoul Pterodacty
 - Nume aplicație: **IP-NET Hosting**
 - Application ID: `ro.ipnet.hosting`
 - Panou: `https://ptero.ip-net.ro`
-- Branding: negru / roșu IP-NET
+- Interfață: branding IP-NET negru / roșu
+- Min SDK: Android 8.0 (API 26)
 
-## Funcționalități inițiale
-- Autentificare prin Client API Key Pterodactyl
-- Listarea serverelor disponibile contului
-- Afișarea statusului și limitelor RAM / disk / CPU
-- Comenzi start, stop și restart
-- Cheia API este păstrată doar în memoria procesului, nu este salvată pe disc
+## Funcționalități implementate în cod
 
-## Cheie API
-În panoul Pterodactyl, creează o cheie **Client API** din contul utilizatorului. Nu folosi o cheie Application API. Introdu cheia direct în aplicație și nu o publica în GitHub sau în conversații.
+- Conectare cu Client API Key Pterodactyl; cheia rămâne în memoria aplicației și nu este salvată pe disc.
+- Listarea serverelor contului, inclusiv paginile următoare ale răspunsului API.
+- Afișarea utilizării CPU, memorie și stocare, cu actualizare periodică.
+- Comenzi de pornire, oprire și restart.
+- Consolă live prin WebSocket și trimiterea comenzilor.
+- Informații despre server și istoric grafic al resurselor.
+- Manager de fișiere: navigare, creare dosare, editare/salvare, redenumire, ștergere, arhivare/dezarhivare și descărcare.
+- Administrare backup-uri, baze de date, programări, utilizatori și alocări de rețea, în limita permisiunilor Client API.
+
+## Cheia API
+
+În panoul Pterodactyl, creează o cheie **Client API** din contul utilizatorului. Nu folosi o cheie Application API. Nu publica cheia în GitHub sau în conversații.
+
+## Validare
+
+Workflow-ul `.github/workflows/native-check.yml` verifică compilarea sursei Kotlin și nu generează APK. APK-ul va fi construit separat, după finalizarea și verificarea aplicației.
 
 ## Build local
-Necesită JDK 17 și Gradle 8.9:
-```bash
-gradle assembleDebug
-```
-APK-ul debug va fi în `app/build/outputs/apk/debug/app-debug.apk`.
 
-## Notă
-Aceasta este o implementare independentă, bazată pe API-ul oficial Pterodactyl; nu include cod sau resurse proprietare din QGS Hosting.
+Necesită JDK 17, Android SDK 35 și Gradle 8.9:
+```bash
+gradle :app:assembleDebug
+```
+
+Aceasta este o implementare Android nativă independentă, care folosește API-ul Pterodactyl; nu împachetează aplicația QGS și nu include cod proprietar QGS.
