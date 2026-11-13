@@ -1,6 +1,8 @@
 package ro.ipnet.hosting
 
 import android.os.Bundle
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -20,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -46,6 +49,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun IpNetApp() {
+    val context = LocalContext.current
     var apiKey by remember { mutableStateOf("") }
     var menuOpen by remember { mutableStateOf(false) }
     var connected by remember { mutableStateOf(false) }
@@ -271,6 +275,19 @@ private fun IpNetApp() {
                             },
                             confirmButton = {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    if (target.isFile) {
+                                        TextButton(onClick = {
+                                            val selected = filesServer
+                                            val client = api
+                                            if (selected != null && client != null) scope.launch {
+                                                runCatching {
+                                                    val path = if (fileDirectory == "/") "/${target.name}" else "$fileDirectory/${target.name}"
+                                                    val url = client.signedFileDownload(selected.identifier, path)
+                                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                                }.onFailure { filesError = it.message ?: "Descărcarea nu a putut fi pornită." }
+                                            }
+                                        }) { Text("DESCARCĂ", color = Color(0xFF55D68B), fontSize = 10.sp) }
+                                    }
                                     TextButton(onClick = {
                                         val selected = filesServer
                                         val client = api
