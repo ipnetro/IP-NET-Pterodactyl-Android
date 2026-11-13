@@ -3,6 +3,8 @@
     <application
         android:allowBackup="false"
         android:label="IP-NET Hosting"
+        android:icon="@drawable/ipnet_logo"
+        android:roundIcon="@drawable/ipnet_logo"
         android:supportsRtl="true"
         android:usesCleartextTraffic="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
