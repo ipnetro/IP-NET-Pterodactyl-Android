@@ -76,7 +76,7 @@ class PterodactylApi {
                 outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             }
         }
-        try {
+        return try {
             val code = connection.responseCode
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
             val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
