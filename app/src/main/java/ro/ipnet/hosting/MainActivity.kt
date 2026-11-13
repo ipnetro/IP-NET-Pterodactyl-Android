@@ -4,6 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -648,15 +651,35 @@ private fun ServerInfoDialog(server: GameServer, api: PterodactylApi, onDismiss:
     var stats by remember(server.identifier) { mutableStateOf<ResourceStats?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    val cpuHistory = remember(server.identifier) { mutableStateListOf<Float>() }
+    val memoryHistory = remember(server.identifier) { mutableStateListOf<Float>() }
+
     LaunchedEffect(server.identifier) {
         loading = true
-        runCatching { api.resourceStats(server.identifier) }
-            .onSuccess { stats = it }
-            .onFailure { error = it.message ?: "Statisticile nu sunt disponibile." }
-        loading = false
+        while (true) {
+            runCatching { api.resourceStats(server.identifier) }
+                .onSuccess { value ->
+                    stats = value
+                    cpuHistory.add(value.cpuPercent.toFloat().coerceIn(0f, 100f))
+                    memoryHistory.add(
+                        if (server.memory > 0) (value.memoryBytes.toFloat() / (server.memory * 1024f * 1024f) * 100f).coerceIn(0f, 100f) else 0f
+                    )
+                    if (cpuHistory.size > 24) cpuHistory.removeAt(0)
+                    if (memoryHistory.size > 24) memoryHistory.removeAt(0)
+                    error = null
+                }
+                .onFailure { error = it.message ?: "Statisticile nu sunt disponibile." }
+            loading = false
+            delay(5000)
+        }
     }
+
     Dialog(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight(0.78f).background(Panel, RoundedCornerShape(18.dp)).padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            Modifier.fillMaxWidth().fillMaxHeight(0.84f)
+                .background(Panel, RoundedCornerShape(18.dp)).padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp)
+        ) {
             Text("SERVER INFORMATION", color = Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Text(server.name, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
             Text(server.identifier, color = Muted, fontSize = 12.sp)
@@ -669,13 +692,40 @@ private fun ServerInfoDialog(server: GameServer, api: PterodactylApi, onDismiss:
             HorizontalDivider(color = Color(0xFF303642))
             Text("LIVE RESOURCE USAGE", color = Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             InfoLine("CPU", stats?.let { "%.1f%%".format(it.cpuPercent) } ?: "—")
+            ResourceHistoryChart("CPU HISTORY", cpuHistory, Red)
             InfoLine("MEMORY", stats?.let { formatFileSize(it.memoryBytes) } ?: "—")
+            ResourceHistoryChart("MEMORY HISTORY", memoryHistory, Color(0xFF24C777))
             InfoLine("STORAGE", stats?.let { formatFileSize(it.diskBytes) } ?: "—")
             InfoLine("UPTIME", stats?.let { formatUptime(it.uptimeMillis) } ?: "—")
             if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
             error?.let { Text(it, color = Color(0xFFFF687D), fontSize = 11.sp) }
+            Text("Actualizare automată la 5 secunde", color = Muted, fontSize = 10.sp)
             Spacer(Modifier.weight(1f))
             TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("CLOSE", color = Red) }
+        }
+    }
+}
+
+@Composable
+private fun ResourceHistoryChart(label: String, values: List<Float>, lineColor: Color) {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(label, color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Canvas(Modifier.fillMaxWidth().height(42.dp)) {
+            val points = values
+            if (points.size >= 2) {
+                val stepX = size.width / (points.size - 1).toFloat()
+                for (i in 0 until points.lastIndex) {
+                    val y1 = size.height - (points[i] / 100f * size.height)
+                    val y2 = size.height - (points[i + 1] / 100f * size.height)
+                    drawLine(
+                        color = lineColor,
+                        start = Offset(i * stepX, y1),
+                        end = Offset((i + 1) * stepX, y2),
+                        strokeWidth = 3.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+                }
+            }
         }
     }
 }
