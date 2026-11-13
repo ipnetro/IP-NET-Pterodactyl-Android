@@ -74,7 +74,7 @@ jobs:
           s = p.read_text(encoding="utf-8")
           # Keep the original QGS activity/class names, but give this app a
           # distinct Android package so Android installs it alongside QGS.
-          s = re.sub(r'(?<=package=")qgs\\.hosting\\.com(?=")', 'ro.ipnet.hosting', s)
+          s = re.sub(r'(?<=package=")qgs\.hosting\.com(?=")', 'ro.ipnet.hosting', s)
           s = s.replace('qgs.hosting.com.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION',
                         'ro.ipnet.hosting.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION')
           s = s.replace('qgs.hosting.com.androidx-startup',
