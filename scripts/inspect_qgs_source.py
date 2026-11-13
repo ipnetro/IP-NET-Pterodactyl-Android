@@ -42,3 +42,23 @@ with ZipFile(archive) as z:
     print("[KEY TEXT MATCHES]")
     for item in matches:
         print(item)
+    print("[APP RESOURCE AND MANIFEST EXCERPTS]")
+    for info in entries:
+        if info.filename.endswith(("AndroidManifest.xml", "res/values/strings.xml", "res/values/colors.xml")):
+            try:
+                excerpt = z.read(info).decode("utf-8")
+            except (UnicodeDecodeError, OSError, RuntimeError):
+                continue
+            print(f"--- {info.filename} ---")
+            print("\\n".join(excerpt.splitlines()[:100]))
+    for target in ("qgs-ipnet-modified/smali/com/qgs/hosting/MainActivity.smali",
+                   "qgs-ipnet-modified/smali/com/qgs/hosting/MainActivity$onCreate$5.smali",
+                   "qgs-ipnet-modified/smali/com/pairip/licensecheck/LicenseClient.smali"):
+        try:
+            excerpt = z.read(target).decode("utf-8")
+        except (KeyError, UnicodeDecodeError, OSError, RuntimeError):
+            continue
+        print(f"--- {target}: key references ---")
+        for number, line in enumerate(excerpt.splitlines(), 1):
+            if any(term in line.lower() for term in ("ptero", "qgs.hosting.com", "packageName".lower(), "webview", "api/")):
+                print(f"{number}: {line[:400]}")
