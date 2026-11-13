@@ -83,17 +83,30 @@ jobs:
               for name in ('ic_launcher.png','ic_launcher_round.png','ic_launcher_foreground.png'):
                   icon.save(folder/name)
           # Match the adaptive icon background to the IP-NET black/red identity.
-          colors=root.parent/'values/colors.xml'
+          # Some Apktool decodes do not contain values/colors.xml at all; create
+          # the resource directory/file instead of aborting the entire workflow.
+          values=root/'values'
+          values.mkdir(parents=True,exist_ok=True)
+          colors=values/'colors.xml'
           if colors.exists():
               data=colors.read_text(encoding='utf-8')
               import re
-              data,n=re.subn(r'(<color name="ic_launcher_background">)[^<]*(</color>)',
-                             r'\\g<1>#0b0c10\\g<2>', data, count=1)
-              if n != 1:
-                  raise SystemExit('Could not locate adaptive launcher background color')
+              pattern=r'<color name="ic_launcher_background">[^<]*</color>'
+              if re.search(pattern,data):
+                  data=re.sub(pattern,
+                              '<color name="ic_launcher_background">#0b0c10</color>',
+                              data,count=1)
+              else:
+                  data=data.replace('</resources>',
+                      '    <color name="ic_launcher_background">#0b0c10</color>\\n</resources>')
               colors.write_text(data,encoding='utf-8')
           else:
-              raise SystemExit('QGS launcher colors.xml is missing')
+              colors.write_text(
+                  '<?xml version="1.0" encoding="utf-8"?>\\n'
+                  '<resources>\\n'
+                  '    <color name="ic_launcher_background">#0b0c10</color>\\n'
+                  '</resources>\\n',
+                  encoding='utf-8')
           print('Applied IP-NET launcher logo and black adaptive-icon background.')
           PY
 
