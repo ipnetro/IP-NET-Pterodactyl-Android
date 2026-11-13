@@ -23,11 +23,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
       - name: Install Android SDK platform
-        run: sdkmanager "platforms;android-35"
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platforms;android-35"
       - name: Compile Kotlin source only (no APK packaging)
         run: gradle :app:compileDebugKotlin --no-daemon
