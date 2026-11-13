@@ -45,10 +45,27 @@ private fun IpNetApp() {
     var error by remember { mutableStateOf<String?>(null) }
     var api by remember { mutableStateOf<PterodactylApi?>(null) }
     var consoleServer by remember { mutableStateOf<GameServer?>(null) }
+    var filesServer by remember { mutableStateOf<GameServer?>(null) }
+    var fileDirectory by remember { mutableStateOf("/") }
+    var serverFiles by remember { mutableStateOf<List<ServerFile>>(emptyList()) }
+    var filesLoading by remember { mutableStateOf(false) }
+    var filesError by remember { mutableStateOf<String?>(null) }
     var consoleCommand by remember { mutableStateOf("") }
     val consoleLines = remember { mutableStateListOf<String>() }
     var consoleSocket by remember { mutableStateOf<WebSocket?>(null) }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(filesServer, fileDirectory, api) {
+        val selected = filesServer
+        val client = api
+        if (selected != null && client != null) {
+            filesLoading = true
+            filesError = null
+            try { serverFiles = client.listFiles(selected.identifier, fileDirectory) }
+            catch (e: Exception) { filesError = e.message ?: "Nu pot încărca fișierele."; serverFiles = emptyList() }
+            finally { filesLoading = false }
+        }
+    }
 
     DisposableEffect(consoleServer, api) {
         val job = if (consoleServer != null && api != null) scope.launch {
@@ -135,7 +152,7 @@ private fun IpNetApp() {
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(servers, key = { it.identifier }) { server ->
-                            ServerCard(server, busy, api, onConsole = { consoleServer = server }, onPower = { action ->
+                            ServerCard(server, busy, api, onConsole = { consoleServer = server }, onFiles = { filesServer = server; fileDirectory = "/" }, onPower = { action ->
                                 scope.launch {
                                     busy = true; error = null
                                     try {
@@ -145,6 +162,50 @@ private fun IpNetApp() {
                                     finally { busy = false }
                                 }
                             })
+                        }
+                    }
+                    if (filesServer != null) {
+                        Dialog(onDismissRequest = { filesServer = null }) {
+                            Column(Modifier.fillMaxWidth().fillMaxHeight(0.82f).background(Panel, RoundedCornerShape(16.dp)).padding(16.dp)) {
+                                Text("MANAGER FIȘIERE", color = Red, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(filesServer!!.name, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                                Text(fileDirectory, color = Muted, fontSize = 11.sp)
+                                Spacer(Modifier.height(10.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = {
+                                        if (fileDirectory != "/") fileDirectory = fileDirectory.substringBeforeLast('/', "").ifBlank { "/" }
+                                    }, enabled = fileDirectory != "/", colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("ÎNAPOI") }
+                                    OutlinedButton(onClick = {
+                                        val selected = filesServer
+                                        val client = api
+                                        if (selected != null && client != null) scope.launch {
+                                            filesLoading = true
+                                            runCatching { client.listFiles(selected.identifier, fileDirectory) }
+                                                .onSuccess { serverFiles = it; filesError = null }
+                                                .onFailure { filesError = it.message ?: "Reîncărcare eșuată" }
+                                            filesLoading = false
+                                        }
+                                    }, colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)) { Text("REÎNCARCĂ") }
+                                }
+                                filesError?.let { Text(it, color = Color(0xFFFF687D), fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp)) }
+                                if (filesLoading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
+                                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    items(serverFiles, key = { it.name }) { entry ->
+                                        Row(Modifier.fillMaxWidth().background(Bg, RoundedCornerShape(8.dp)).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            Text(if (entry.isFile) "📄" else "📁", fontSize = 18.sp)
+                                            Spacer(Modifier.width(10.dp))
+                                            Column(Modifier.weight(1f)) {
+                                                Text(entry.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                                Text(if (entry.isFile) formatFileSize(entry.sizeBytes) else "Dosar", color = Muted, fontSize = 10.sp)
+                                            }
+                                            if (!entry.isFile) TextButton(onClick = {
+                                                fileDirectory = if (fileDirectory == "/") "/" + entry.name else fileDirectory + "/" + entry.name
+                                            }) { Text("DESCHIDE", color = Red, fontSize = 10.sp) }
+                                        }
+                                    }
+                                }
+                                TextButton(onClick = { filesServer = null }, modifier = Modifier.align(Alignment.End)) { Text("ÎNCHIDE", color = Red) }
+                            }
                         }
                     }
                     if (consoleServer != null) {
@@ -187,7 +248,7 @@ private fun IpNetApp() {
 }
 
 @Composable
-private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, onConsole: () -> Unit, onPower: (String) -> Unit) {
+private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, onConsole: () -> Unit, onFiles: () -> Unit, onPower: (String) -> Unit) {
     var stats by remember(server.identifier) { mutableStateOf<ResourceStats?>(null) }
     LaunchedEffect(server.identifier, api) {
         while (api != null) {
@@ -222,6 +283,7 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
             PowerButton("STOP", "stop", !busy && !server.isSuspended, onPower)
             PowerButton("RESTART", "restart", !busy && !server.isSuspended, onPower)
             OutlinedButton(onClick = onConsole, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("CONSOLA", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+            OutlinedButton(onClick = onFiles, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("FIȘIERE", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
         }
     }
 }
@@ -233,4 +295,11 @@ private fun PowerButton(label: String, action: String, enabled: Boolean, onPower
         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)
     ) { Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+}
+
+private fun formatFileSize(bytes: Long): String = when {
+    bytes >= 1024L * 1024L * 1024L -> "%.2f GB".format(bytes / (1024.0 * 1024.0 * 1024.0))
+    bytes >= 1024L * 1024L -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
+    bytes >= 1024L -> "%.1f KB".format(bytes / 1024.0)
+    else -> "$bytes B"
 }
