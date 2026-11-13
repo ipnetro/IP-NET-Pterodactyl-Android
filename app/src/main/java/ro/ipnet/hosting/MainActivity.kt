@@ -282,6 +282,30 @@ private fun IpNetApp() {
                                             fileActionTarget = null
                                         }
                                     }) { Text("REDENUMIRE", color = Red) }
+                                    if (target.isFile && target.name.substringAfterLast('.', "").lowercase() in setOf("zip", "tar", "gz")) {
+                                        TextButton(onClick = {
+                                            val selected = filesServer
+                                            val client = api
+                                            if (selected != null && client != null) scope.launch {
+                                                runCatching { client.decompressFile(selected.identifier, fileDirectory, target.name) }
+                                                    .onSuccess { serverFiles = client.listFiles(selected.identifier, fileDirectory); filesError = "Arhiva a fost extrasă." }
+                                                    .onFailure { filesError = it.message ?: "Extragerea arhivei a eșuat." }
+                                                fileActionTarget = null
+                                            }
+                                        }) { Text("EXTRAGE", color = Color(0xFF55D68B), fontSize = 10.sp) }
+                                    }
+                                    if (target.isFile && target.name.substringAfterLast('.', "").lowercase() !in setOf("zip", "tar", "gz")) {
+                                        TextButton(onClick = {
+                                            val selected = filesServer
+                                            val client = api
+                                            if (selected != null && client != null) scope.launch {
+                                                runCatching { client.compressFiles(selected.identifier, fileDirectory, listOf(target.name)) }
+                                                    .onSuccess { serverFiles = client.listFiles(selected.identifier, fileDirectory); filesError = "Arhivarea a fost solicitată." }
+                                                    .onFailure { filesError = it.message ?: "Arhivarea a eșuat." }
+                                                fileActionTarget = null
+                                            }
+                                        }) { Text("ARHIVEAZĂ", color = Color(0xFF55D68B), fontSize = 10.sp) }
+                                    }
                                     TextButton(onClick = {
                                         val selected = filesServer
                                         val client = api
