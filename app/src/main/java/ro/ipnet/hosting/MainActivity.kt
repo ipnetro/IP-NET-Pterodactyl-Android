@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import okhttp3.WebSocket
+import com.google.gson.JsonObject
 import androidx.compose.ui.window.Dialog
 
 private val Bg = Color(0xFF090A0D)
@@ -50,6 +51,7 @@ private fun IpNetApp() {
     var serverFiles by remember { mutableStateOf<List<ServerFile>>(emptyList()) }
     var filesLoading by remember { mutableStateOf(false) }
     var filesError by remember { mutableStateOf<String?>(null) }
+    var managementServer by remember { mutableStateOf<GameServer?>(null) }
     var consoleCommand by remember { mutableStateOf("") }
     val consoleLines = remember { mutableStateListOf<String>() }
     var consoleSocket by remember { mutableStateOf<WebSocket?>(null) }
@@ -152,7 +154,7 @@ private fun IpNetApp() {
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(servers, key = { it.identifier }) { server ->
-                            ServerCard(server, busy, api, onConsole = { consoleServer = server }, onFiles = { filesServer = server; fileDirectory = "/" }, onPower = { action ->
+                            ServerCard(server, busy, api, onConsole = { consoleServer = server }, onFiles = { filesServer = server; fileDirectory = "/" }, onManage = { managementServer = server }, onPower = { action ->
                                 scope.launch {
                                     busy = true; error = null
                                     try {
@@ -163,6 +165,9 @@ private fun IpNetApp() {
                                 }
                             })
                         }
+                    }
+                    if (managementServer != null) {
+                        ManagementDialog(server = managementServer!!, api = api!!, onDismiss = { managementServer = null })
                     }
                     if (filesServer != null) {
                         Dialog(onDismissRequest = { filesServer = null }) {
@@ -248,7 +253,7 @@ private fun IpNetApp() {
 }
 
 @Composable
-private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, onConsole: () -> Unit, onFiles: () -> Unit, onPower: (String) -> Unit) {
+private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, onConsole: () -> Unit, onFiles: () -> Unit, onManage: () -> Unit, onPower: (String) -> Unit) {
     var stats by remember(server.identifier) { mutableStateOf<ResourceStats?>(null) }
     LaunchedEffect(server.identifier, api) {
         while (api != null) {
@@ -284,6 +289,161 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
             PowerButton("RESTART", "restart", !busy && !server.isSuspended, onPower)
             OutlinedButton(onClick = onConsole, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("CONSOLA", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
             OutlinedButton(onClick = onFiles, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("FIȘIERE", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+            OutlinedButton(onClick = onManage, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)) { Text("GESTIUNE", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+        }
+    }
+}
+
+
+@Composable
+private fun ManagementDialog(server: GameServer, api: PterodactylApi, onDismiss: () -> Unit) {
+    var section by remember { mutableStateOf("BACKUP-URI") }
+    var rows by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var backupName by remember { mutableStateOf("") }
+    var databaseName by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+
+    fun refresh() {
+        scope.launch {
+            loading = true
+            message = null
+            try {
+                rows = when (section) {
+                    "BACKUP-URI" -> api.backups(server.identifier)
+                    "BAZE DE DATE" -> api.databases(server.identifier)
+                    "SCHEDULES" -> api.schedules(server.identifier)
+                    "UTILIZATORI" -> api.subusers(server.identifier)
+                    "REȚEA" -> api.allocations(server.identifier)
+                    else -> emptyList()
+                }
+            } catch (e: Exception) {
+                rows = emptyList()
+                message = e.message ?: "Nu pot încărca secțiunea."
+            } finally { loading = false }
+        }
+    }
+
+    LaunchedEffect(section, server.identifier) { refresh() }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().fillMaxHeight(0.84f)
+                .background(Panel, RoundedCornerShape(18.dp)).padding(16.dp)
+        ) {
+            Text("CONTROL SERVER", color = Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(server.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("BACKUP-URI", "BAZE DE DATE", "SCHEDULES").forEach { tab ->
+                    TextButton(onClick = { section = tab }) {
+                        Text(tab, color = if (section == tab) Red else Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("UTILIZATORI", "REȚEA").forEach { tab ->
+                    TextButton(onClick = { section = tab }) {
+                        Text(tab, color = if (section == tab) Red else Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = { refresh() }) { Text("ACTUALIZEAZĂ", color = Color.White, fontSize = 9.sp) }
+            }
+            Divider(color = Muted.copy(alpha = 0.25f))
+            if (section == "BACKUP-URI") {
+                OutlinedTextField(
+                    value = backupName, onValueChange = { backupName = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    label = { Text("Nume backup (opțional)") }
+                )
+                Button(
+                    onClick = {
+                        scope.launch {
+                            loading = true
+                            runCatching { api.createBackup(server.identifier, backupName.trim()) }
+                                .onSuccess { message = "Backup-ul a fost solicitat."; backupName = ""; refresh() }
+                                .onFailure { message = it.message ?: "Crearea backup-ului a eșuat." }
+                            loading = false
+                        }
+                    },
+                    enabled = !loading, modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Red)
+                ) { Text("CREEAZĂ BACKUP") }
+            }
+            if (section == "BAZE DE DATE") {
+                OutlinedTextField(
+                    value = databaseName, onValueChange = { databaseName = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    label = { Text("Nume bază de date") }
+                )
+                Button(
+                    onClick = {
+                        scope.launch {
+                            loading = true
+                            runCatching { api.createDatabase(server.identifier, databaseName.trim()) }
+                                .onSuccess { message = "Cererea de creare a bazei de date a fost trimisă."; databaseName = ""; refresh() }
+                                .onFailure { message = it.message ?: "Crearea bazei de date a eșuat." }
+                            loading = false
+                        }
+                    },
+                    enabled = !loading && databaseName.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Red)
+                ) { Text("ADAUGĂ BAZĂ DE DATE") }
+            }
+            message?.let { Text(it, color = if (it.contains("eșuat") || it.contains("Nu pot")) Color(0xFFFF687D) else Color(0xFF55D68B), fontSize = 11.sp, modifier = Modifier.padding(vertical = 6.dp)) }
+            if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(rows.size) { index ->
+                    val row = rows[index]
+                    val label = row.get("name")?.takeUnless { it.isJsonNull }?.asString
+                        ?: row.get("database")?.takeUnless { it.isJsonNull }?.asString
+                        ?: row.get("uuid")?.takeUnless { it.isJsonNull }?.asString
+                        ?: row.get("id")?.takeUnless { it.isJsonNull }?.asString
+                        ?: "Element \${index + 1}"
+                    val detail = row.entrySet().take(5).joinToString(" • ") { (key, value) ->
+                        "\$key: \${value.toString().trim('"')}"
+                    }
+                    Column(Modifier.fillMaxWidth().background(Bg, RoundedCornerShape(10.dp)).padding(12.dp)) {
+                        Text(label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(detail, color = Muted, fontSize = 10.sp)
+                        if (section == "BACKUP-URI") {
+                            val id = row.get("uuid")?.asString.orEmpty()
+                            TextButton(
+                                onClick = {
+                                    scope.launch {
+                                        runCatching { api.deleteBackup(server.identifier, id) }
+                                            .onSuccess { message = "Backup șters."; refresh() }
+                                            .onFailure { message = it.message ?: "Ștergerea a eșuat." }
+                                    }
+                                },
+                                enabled = id.isNotBlank()
+                            ) { Text("ȘTERGE BACKUP", color = Red, fontSize = 10.sp) }
+                        }
+                        if (section == "BAZE DE DATE") {
+                            val id = row.get("id")?.asString.orEmpty()
+                            TextButton(
+                                onClick = {
+                                    scope.launch {
+                                        runCatching { api.rotateDatabasePassword(server.identifier, id) }
+                                            .onSuccess { message = "Parola bazei de date a fost rotită. Verifică detaliile în panou."; refresh() }
+                                            .onFailure { message = it.message ?: "Rotirea parolei a eșuat." }
+                                    }
+                                },
+                                enabled = id.isNotBlank()
+                            ) { Text("ROTEȘTE PAROLA", color = Red, fontSize = 10.sp) }
+                        }
+                    }
+                }
+            }
+            if (rows.isEmpty() && !loading && message == null) {
+                Text("Nu există elemente sau API-ul nu oferă acces la această secțiune.", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
+            }
+            TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+                Text("ÎNCHIDE", color = Red)
+            }
         }
     }
 }
