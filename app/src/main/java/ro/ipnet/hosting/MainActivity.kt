@@ -3,6 +3,7 @@ package ro.ipnet.hosting
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -16,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -122,12 +124,11 @@ private fun IpNetHostingApp(vm: HostingViewModel = viewModel()) {
 @Composable
 private fun Header(connected: Boolean, onRefresh: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier.size(42.dp).background(IpNetRed, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("IP", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
-        }
+        Image(
+            painter = painterResource(R.drawable.ipnet_logo),
+            contentDescription = "IP-NET",
+            modifier = Modifier.size(42.dp)
+        )
         Spacer(Modifier.width(11.dp))
         Column(Modifier.weight(1f)) {
             Text("IP-NET", color = IpNetWhite, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
