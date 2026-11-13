@@ -7,6 +7,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -146,7 +148,12 @@ private fun Header(connected: Boolean, onRefresh: () -> Unit) {
 private fun LoginPanel(loading: Boolean, error: String?, onConnect: (String) -> Unit) {
     var apiKey by remember { mutableStateOf("") }
     Column(
-        Modifier.fillMaxWidth().background(IpNetPanel, RoundedCornerShape(22.dp)).padding(20.dp)
+        Modifier
+            .fillMaxWidth()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .background(IpNetPanel, RoundedCornerShape(22.dp))
+            .padding(20.dp)
     ) {
         Text("Conectare la panou", color = IpNetWhite, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(6.dp))
