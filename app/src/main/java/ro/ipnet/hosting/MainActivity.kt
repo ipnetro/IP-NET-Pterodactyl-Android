@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun IpNetApp() {
     var apiKey by remember { mutableStateOf("") }
+    var menuOpen by remember { mutableStateOf(false) }
     var connected by remember { mutableStateOf(false) }
     var servers by remember { mutableStateOf<List<GameServer>>(emptyList()) }
     var busy by remember { mutableStateOf(false) }
@@ -112,23 +113,18 @@ private fun IpNetApp() {
                 modifier = Modifier.align(Alignment.Center).size(310.dp).alpha(0.10f)
             )
             Surface(Modifier.fillMaxSize(), color = Color.Transparent) {
-            Column(Modifier.fillMaxSize().padding(20.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ipnet_logo),
-                        contentDescription = "IP-NET",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(54.dp)
-                    )
+            Column(Modifier.fillMaxSize()) {
+                Row(Modifier.fillMaxWidth().background(Color(0xFF07090D)).padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Image(painter = painterResource(id = R.drawable.ipnet_logo), contentDescription = "IP-NET Hosting", contentScale = ContentScale.Fit, modifier = Modifier.size(58.dp))
                     Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text("IP-NET", color = Red, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        Text("HOSTING", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black)
-                        Text("Pterodactyl Control Panel", color = Muted, fontSize = 13.sp)
+                    Column(Modifier.weight(1f)) {
+                        Text("IP-NET", color = Red, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text("HOSTING", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
                     }
+                    TextButton(onClick = { menuOpen = !menuOpen }) { Text(if (menuOpen) "✕" else "☰", color = Color.White, fontSize = 28.sp) }
                 }
-                Spacer(Modifier.height(24.dp))
-
+                Column(Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 14.dp)) {
+                Spacer(Modifier.height(4.dp))
                 if (!connected) {
                     Text("Conectare la panou", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
@@ -383,6 +379,34 @@ private fun IpNetApp() {
                     Spacer(Modifier.height(12.dp))
                     Text(it, color = Color(0xFFFF687D), fontSize = 13.sp)
                 }
+                }
+                if (connected) {
+                    Row(Modifier.fillMaxWidth().background(Color(0xFF10151D)).padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = { menuOpen = false }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("▤", color = Red, fontSize = 22.sp); Text("My Servers", color = Color.White, fontSize = 11.sp) } }
+                        TextButton(onClick = { menuOpen = true }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("♙", color = Muted, fontSize = 22.sp); Text("Account", color = Color.White, fontSize = 11.sp) } }
+                        TextButton(onClick = { connected = false; api = null; apiKey = ""; servers = emptyList() }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("⇥", color = Muted, fontSize = 22.sp); Text("Log Out", color = Color.White, fontSize = 11.sp) } }
+                    }
+                }
+                if (menuOpen) {
+                    Dialog(onDismissRequest = { menuOpen = false }) {
+                        Column(Modifier.fillMaxWidth().background(Color(0xFF111923), RoundedCornerShape(12.dp)).padding(12.dp)) {
+                            Text("IP-NET HOSTING", color = Red, fontWeight = FontWeight.Bold, modifier = Modifier.padding(10.dp))
+                            listOf("DASHBOARD", "MY SERVERS", "CONSOLE", "FILE MANAGER", "SERVER CONFIG", "SETTINGS", "DATABASES", "SCHEDULES", "ACCESS CONTROL", "BACKUPS", "NETWORK", "TOOLS").forEach { item ->
+                                TextButton(onClick = {
+                                    menuOpen = false
+                                    val selected = servers.firstOrNull()
+                                    when (item) {
+                                        "CONSOLE" -> if (selected != null) consoleServer = selected
+                                        "FILE MANAGER" -> if (selected != null) { filesServer = selected; fileDirectory = "/" }
+                                        "DATABASES", "SCHEDULES", "ACCESS CONTROL", "BACKUPS", "NETWORK", "TOOLS" -> if (selected != null) managementServer = selected
+                                    }
+                                }, modifier = Modifier.fillMaxWidth()) { Text(item, color = Color.White, modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.SemiBold) }
+                            }
+                        }
+                    }
+                }
+
             }
             }
         }
@@ -394,43 +418,54 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
     var stats by remember(server.identifier) { mutableStateOf<ResourceStats?>(null) }
     LaunchedEffect(server.identifier, api) {
         while (api != null) {
-            runCatching { api.resourceStats(server.identifier) }
-                .onSuccess { stats = it }
+            runCatching { api.resourceStats(server.identifier) }.onSuccess { stats = it }
             delay(5_000)
         }
     }
-    Column(
-        Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(14.dp)).padding(16.dp)
-    ) {
-        Text(server.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        if (server.description.isNotBlank()) Text(server.description, color = Muted, fontSize = 12.sp)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            if (server.isSuspended) "SUSPENDAT" else (stats?.state ?: server.status ?: "SE VERIFICĂ").uppercase(),
-            color = if (stats?.state == "running" || server.status == "running") Color(0xFF55D68B) else Red,
-            fontSize = 12.sp, fontWeight = FontWeight.Bold
-        )
-        Spacer(Modifier.height(8.dp))
-        Text("Limite: RAM ${server.memory} MB  •  Disk ${server.disk} MB  •  CPU ${server.cpu}%", color = Muted, fontSize = 11.sp)
-        Spacer(Modifier.height(5.dp))
-        Text(
-            stats?.let {
-                "Utilizare: RAM ${it.memoryBytes / 1024 / 1024} MB  •  Disk ${it.diskBytes / 1024 / 1024} MB  •  CPU ${"%.1f".format(it.cpuPercent)}%"
-            } ?: "Se încarcă utilizarea resurselor...",
-            color = Color(0xFF55D68B), fontSize = 11.sp
-        )
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PowerButton("START", "start", !busy && !server.isSuspended, onPower)
-            PowerButton("STOP", "stop", !busy && !server.isSuspended, onPower)
-            PowerButton("RESTART", "restart", !busy && !server.isSuspended, onPower)
-            OutlinedButton(onClick = onConsole, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("CONSOLA", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
-            OutlinedButton(onClick = onFiles, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("FIȘIERE", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
-            OutlinedButton(onClick = onManage, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)) { Text("GESTIUNE", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+    val running = stats?.state == "running" || server.status == "running"
+    val memoryUsed = stats?.memoryBytes?.div(1024L * 1024L) ?: 0L
+    val diskUsed = stats?.diskBytes?.div(1024L * 1024L) ?: 0L
+    Column(Modifier.fillMaxWidth().background(Color(0xFF121B26), RoundedCornerShape(10.dp)).padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(server.name.uppercase(), fontSize = 19.sp, fontWeight = FontWeight.Black, color = Color.White)
+                Text(server.identifier, color = Color(0xFF43B5F5), fontSize = 12.sp)
+            }
+            Text(if (server.isSuspended) "SUSPENDED" else if (running) "● ONLINE" else "● OFFLINE",
+                color = if (running && !server.isSuspended) Color(0xFF43D6A1) else Red, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = { onPower("start") }, enabled = !busy && !server.isSuspended, modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF168FD0))) { Text("▶") }
+            Button(onClick = { onPower("restart") }, enabled = !busy && !server.isSuspended, modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFBD16), contentColor = Color.Black)) { Text("⟳") }
+            Button(onClick = { onPower("stop") }, enabled = !busy && !server.isSuspended, modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE9444D))) { Text("■") }
+        }
+        Spacer(Modifier.height(16.dp))
+        Text("CPU  ${"%.1f".format(stats?.cpuPercent ?: 0.0)}% / ${server.cpu}%", color = Color.White, fontSize = 12.sp)
+        LinearProgressIndicator(progress = { ((stats?.cpuPercent ?: 0.0) / server.cpu.coerceAtLeast(1)).toFloat().coerceIn(0f,1f) },
+            modifier = Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF3978E8), trackColor = Color(0xFF263241))
+        Spacer(Modifier.height(9.dp))
+        Text("MEMORY  $memoryUsed MB / ${server.memory} MB", color = Color.White, fontSize = 12.sp)
+        LinearProgressIndicator(progress = { (memoryUsed.toFloat() / server.memory.coerceAtLeast(1)).coerceIn(0f,1f) },
+            modifier = Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF24C777), trackColor = Color(0xFF263241))
+        Spacer(Modifier.height(9.dp))
+        Text("STORAGE  $diskUsed MB / ${server.disk} MB", color = Color.White, fontSize = 12.sp)
+        LinearProgressIndicator(progress = { (diskUsed.toFloat() / (server.disk.coerceAtLeast(1) * 1_048_576f)).coerceIn(0f,1f) },
+            modifier = Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF22B7E9), trackColor = Color(0xFF263241))
+        Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = onConsole, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("CONSOLE", fontSize = 10.sp) }
+            OutlinedButton(onClick = onFiles, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("FILES", fontSize = 10.sp) }
+            OutlinedButton(onClick = onManage, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)) { Text("MANAGE", fontSize = 10.sp) }
         }
     }
 }
-
 
 @Composable
 private fun ManagementDialog(server: GameServer, api: PterodactylApi, onDismiss: () -> Unit) {
