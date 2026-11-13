@@ -491,6 +491,8 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
     var message by remember { mutableStateOf<String?>(null) }
     var backupName by remember { mutableStateOf("") }
     var databaseName by remember { mutableStateOf("") }
+    var scheduleName by remember { mutableStateOf("") }
+    var scheduleCron by remember { mutableStateOf("*/5 * * * *") }
     val scope = rememberCoroutineScope()
 
     fun refresh() {
@@ -570,6 +572,25 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                     colors = ButtonDefaults.buttonColors(containerColor = Red)
                 ) { Text("CREEAZĂ BACKUP") }
             }
+            if (section == "SCHEDULES") {
+                OutlinedTextField(value = scheduleName, onValueChange = { scheduleName = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Numele programării") })
+                OutlinedTextField(value = scheduleCron, onValueChange = { scheduleCron = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    label = { Text("Cron: minută oră zi-lună lună zi-săptămână") },
+                    supportingText = { Text("Exemplu: */5 * * * * (la fiecare 5 minute)") })
+                Button(onClick = {
+                    scope.launch {
+                        loading = true
+                        runCatching { api.createSchedule(server.identifier, scheduleName.trim(), scheduleCron) }
+                            .onSuccess { message = "Programarea a fost creată."; scheduleName = ""; refresh() }
+                            .onFailure { message = it.message ?: "Crearea programării a eșuat." }
+                        loading = false
+                    }
+                }, enabled = !loading && scheduleName.isNotBlank() && scheduleCron.trim().split(Regex("\\s+")).size == 5,
+                    modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Red)
+                ) { Text("CREEAZĂ PROGRAMARE") }
+            }
             if (section == "BAZE DE DATE") {
                 OutlinedTextField(
                     value = databaseName, onValueChange = { databaseName = it },
@@ -607,6 +628,16 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                     Column(Modifier.fillMaxWidth().background(Bg, RoundedCornerShape(10.dp)).padding(12.dp)) {
                         Text(label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Text(detail, color = Muted, fontSize = 10.sp)
+                        if (section == "SCHEDULES") {
+                            val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                            TextButton(onClick = {
+                                scope.launch {
+                                    runCatching { api.deleteSchedule(server.identifier, id) }
+                                        .onSuccess { message = "Programarea a fost ștearsă."; refresh() }
+                                        .onFailure { message = it.message ?: "Ștergerea programării a eșuat." }
+                                }
+                            }, enabled = id.isNotBlank()) { Text("ȘTERGE PROGRAMAREA", color = Red, fontSize = 10.sp) }
+                        }
                         if (section == "BACKUP-URI") {
                             val id = row.get("uuid")?.asString.orEmpty()
                             TextButton(
