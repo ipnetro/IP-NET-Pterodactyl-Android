@@ -7,6 +7,7 @@ on:
       - '.github/workflows/android.yml'
       - 'qgs-ipnet-modified-source.zip'
       - 'ipnet_hosting_logo.png'
+      - 'scripts/**'
   workflow_dispatch:
 
 permissions:
