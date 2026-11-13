@@ -8,7 +8,12 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import okio.ByteString
 import java.util.concurrent.TimeUnit
+
+data class ConsoleCredentials(val socket: String, val token: String)
 
 data class ResourceStats(
     val state: String,
@@ -86,6 +91,64 @@ class PterodactylApi(private val apiKey: String) {
             "POST",
             """{"signal":"$signal"}"""
         )
+    }
+
+    suspend fun consoleCredentials(identifier: String): ConsoleCredentials {
+        val root = JsonParser.parseString(
+            request("/api/client/servers/$identifier/websocket")
+        ).asJsonObject.getAsJsonObject("data")
+        return ConsoleCredentials(
+            socket = root.get("socket").asString,
+            token = root.get("token").asString
+        )
+    }
+
+    fun connectConsole(
+        credentials: ConsoleCredentials,
+        onLine: (String) -> Unit,
+        onClosed: (String) -> Unit
+    ): WebSocket {
+        val wsClient = client.newBuilder().readTimeout(0, TimeUnit.MILLISECONDS).build()
+        val request = Request.Builder().url(credentials.socket).build()
+        return wsClient.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: okhttp3.Response) {
+                val auth = JsonObject().apply {
+                    addProperty("event", "auth")
+                    add("args", com.google.gson.JsonArray().apply {
+                        add(credentials.token)
+                    })
+                }
+                webSocket.send(auth.toString())
+            }
+
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                runCatching {
+                    val event = JsonParser.parseString(text).asJsonObject
+                    when (event.get("event")?.asString) {
+                        "auth success" -> onLine("[Consolă conectată]")
+                        "console output" -> event.getAsJsonArray("args")?.forEach {
+                            onLine(it.asString)
+                        }
+                        "status" -> event.getAsJsonArray("args")?.firstOrNull()?.let {
+                            onLine("[Stare: ${it.asString}]")
+                        }
+                        "token expiring" -> onLine("[Sesiunea consolei expiră]")
+                    }
+                }.onFailure { onLine(text) }
+            }
+
+            override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                onLine(bytes.utf8())
+            }
+
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: okhttp3.Response?) {
+                onClosed(t.message ?: "Conexiunea consolei a eșuat")
+            }
+
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                onClosed("Consolă închisă: $reason")
+            }
+        })
     }
 
     suspend fun resources(identifier: String): JsonObject =
