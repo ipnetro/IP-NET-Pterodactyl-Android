@@ -20,6 +20,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 private val Bg = Color(0xFF090A0D)
 private val Panel = Color(0xFF151820)
@@ -107,7 +108,7 @@ private fun IpNetApp() {
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(servers, key = { it.identifier }) { server ->
-                            ServerCard(server, busy, onPower = { action ->
+                            ServerCard(server, busy, api, onPower = { action ->
                                 scope.launch {
                                     busy = true; error = null
                                     try {
@@ -130,7 +131,15 @@ private fun IpNetApp() {
 }
 
 @Composable
-private fun ServerCard(server: GameServer, busy: Boolean, onPower: (String) -> Unit) {
+private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, onPower: (String) -> Unit) {
+    var stats by remember(server.identifier) { mutableStateOf<ResourceStats?>(null) }
+    LaunchedEffect(server.identifier, api) {
+        while (api != null) {
+            runCatching { api.resourceStats(server.identifier) }
+                .onSuccess { stats = it }
+            delay(5_000)
+        }
+    }
     Column(
         Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(14.dp)).padding(16.dp)
     ) {
@@ -138,12 +147,19 @@ private fun ServerCard(server: GameServer, busy: Boolean, onPower: (String) -> U
         if (server.description.isNotBlank()) Text(server.description, color = Muted, fontSize = 12.sp)
         Spacer(Modifier.height(8.dp))
         Text(
-            if (server.isSuspended) "SUSPENDAT" else (server.status ?: "STATUS NECUNOSCUT").uppercase(),
-            color = if (server.status == "running") Color(0xFF55D68B) else Red,
+            if (server.isSuspended) "SUSPENDAT" else (stats?.state ?: server.status ?: "SE VERIFICĂ").uppercase(),
+            color = if (stats?.state == "running" || server.status == "running") Color(0xFF55D68B) else Red,
             fontSize = 12.sp, fontWeight = FontWeight.Bold
         )
         Spacer(Modifier.height(8.dp))
-        Text("RAM: ${server.memory} MB  •  Disk: ${server.disk} MB  •  CPU: ${server.cpu}%", color = Muted, fontSize = 11.sp)
+        Text("Limite: RAM ${server.memory} MB  •  Disk ${server.disk} MB  •  CPU ${server.cpu}%", color = Muted, fontSize = 11.sp)
+        Spacer(Modifier.height(5.dp))
+        Text(
+            stats?.let {
+                "Utilizare: RAM ${it.memoryBytes / 1024 / 1024} MB  •  Disk ${it.diskBytes / 1024 / 1024} MB  •  CPU ${"%.1f".format(it.cpuPercent)}%"
+            } ?: "Se încarcă utilizarea resurselor...",
+            color = Color(0xFF55D68B), fontSize = 11.sp
+        )
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PowerButton("START", "start", !busy && !server.isSuspended, onPower)
