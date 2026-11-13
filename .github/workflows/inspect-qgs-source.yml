@@ -1,0 +1,28 @@
+name: Inspect QGS source (no APK)
+
+on:
+  push:
+    branches: [ qgs-ipnet-rebrand ]
+    paths:
+      - 'qgs-ipnet-modified-source.zip'
+      - 'scripts/inspect_qgs_source.py'
+      - '.github/workflows/inspect-qgs-source.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect decoded source archive
+        run: python3 scripts/inspect_qgs_source.py
+      - name: Upload inspection report
+        uses: actions/upload-artifact@v4
+        with:
+          name: qgs-source-inspection
+          path: qgs-inspection/
+          if-no-files-found: error
+          retention-days: 14
