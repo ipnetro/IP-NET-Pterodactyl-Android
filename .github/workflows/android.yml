@@ -80,6 +80,7 @@ jobs:
           # the resource directory/file instead of aborting the entire workflow.
           values=root/'values'
           values.mkdir(parents=True,exist_ok=True)
+          # Resource paths are relative to res/, not to the decoded APK root.
           colors=values/'colors.xml'
           if colors.exists():
               data=colors.read_text(encoding='utf-8')
