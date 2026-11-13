@@ -497,11 +497,11 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
         }
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(onClick = { onPower("start") }, enabled = !busy && !server.isSuspended, modifier = Modifier.weight(1f),
+            Button(onClick = { onPower("start") }, enabled = !busy && !server.isSuspended && !running, modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF168FD0))) { Text("▶") }
-            Button(onClick = { onPower("restart") }, enabled = !busy && !server.isSuspended, modifier = Modifier.weight(1f),
+            Button(onClick = { onPower("restart") }, enabled = !busy && !server.isSuspended && running, modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFBD16), contentColor = Color.Black)) { Text("⟳") }
-            Button(onClick = { onPower("stop") }, enabled = !busy && !server.isSuspended, modifier = Modifier.weight(1f),
+            Button(onClick = { onPower("stop") }, enabled = !busy && !server.isSuspended && running, modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE9444D))) { Text("■") }
         }
         Spacer(Modifier.height(16.dp))
@@ -514,7 +514,7 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
             modifier = Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF24C777), trackColor = Color(0xFF263241))
         Spacer(Modifier.height(9.dp))
         Text("STORAGE  $diskUsed MB / ${server.disk} MB", color = Color.White, fontSize = 12.sp)
-        LinearProgressIndicator(progress = { (diskUsed.toFloat() / (server.disk.coerceAtLeast(1) * 1_048_576f)).coerceIn(0f,1f) },
+        LinearProgressIndicator(progress = { (diskUsed.toFloat() / server.disk.coerceAtLeast(1).toFloat()).coerceIn(0f,1f) },
             modifier = Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF22B7E9), trackColor = Color(0xFF263241))
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
