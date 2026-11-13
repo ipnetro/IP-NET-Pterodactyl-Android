@@ -505,17 +505,41 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE9444D))) { Text("■") }
         }
         Spacer(Modifier.height(16.dp))
-        Text("CPU  ${"%.1f".format(stats?.cpuPercent ?: 0.0)}% / ${server.cpu}%", color = Color.White, fontSize = 12.sp)
-        LinearProgressIndicator(progress = { ((stats?.cpuPercent ?: 0.0) / server.cpu.coerceAtLeast(1)).toFloat().coerceIn(0f,1f) },
-            modifier = Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF3978E8), trackColor = Color(0xFF263241))
+        Text(
+            "CPU  ${"%.1f".format(stats?.cpuPercent ?: 0.0)}% / ${if (server.cpu > 0) "${server.cpu}%" else "NELIMITAT"}",
+            color = Color.White, fontSize = 12.sp
+        )
+        if (server.cpu > 0) {
+            LinearProgressIndicator(
+                progress = { ((stats?.cpuPercent ?: 0.0) / server.cpu).toFloat().coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(7.dp),
+                color = Color(0xFF3978E8), trackColor = Color(0xFF263241)
+            )
+        }
         Spacer(Modifier.height(9.dp))
-        Text("MEMORY  $memoryUsed MB / ${server.memory} MB", color = Color.White, fontSize = 12.sp)
-        LinearProgressIndicator(progress = { (memoryUsed.toFloat() / server.memory.coerceAtLeast(1)).coerceIn(0f,1f) },
-            modifier = Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF24C777), trackColor = Color(0xFF263241))
+        Text(
+            "MEMORY  $memoryUsed MB / ${if (server.memory > 0) "${server.memory} MB" else "NELIMITAT"}",
+            color = Color.White, fontSize = 12.sp
+        )
+        if (server.memory > 0) {
+            LinearProgressIndicator(
+                progress = { (memoryUsed.toFloat() / server.memory).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(7.dp),
+                color = Color(0xFF24C777), trackColor = Color(0xFF263241)
+            )
+        }
         Spacer(Modifier.height(9.dp))
-        Text("STORAGE  $diskUsed MB / ${server.disk} MB", color = Color.White, fontSize = 12.sp)
-        LinearProgressIndicator(progress = { (diskUsed.toFloat() / server.disk.coerceAtLeast(1).toFloat()).coerceIn(0f,1f) },
-            modifier = Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF22B7E9), trackColor = Color(0xFF263241))
+        Text(
+            "STORAGE  $diskUsed MB / ${if (server.disk > 0) "${server.disk} MB" else "NELIMITAT"}",
+            color = Color.White, fontSize = 12.sp
+        )
+        if (server.disk > 0) {
+            LinearProgressIndicator(
+                progress = { (diskUsed.toFloat() / server.disk).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(7.dp),
+                color = Color(0xFF22B7E9), trackColor = Color(0xFF263241)
+            )
+        }
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedButton(onClick = onInfo, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)) { Text("INFO", fontSize = 10.sp) }
