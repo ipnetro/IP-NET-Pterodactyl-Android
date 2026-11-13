@@ -516,9 +516,9 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, onDismiss:
                         ?: row.get("database")?.takeUnless { it.isJsonNull }?.asString
                         ?: row.get("uuid")?.takeUnless { it.isJsonNull }?.asString
                         ?: row.get("id")?.takeUnless { it.isJsonNull }?.asString
-                        ?: "Element \${index + 1}"
+                        ?: "Element ${index + 1}"
                     val detail = row.entrySet().take(5).joinToString(" • ") { (key, value) ->
-                        "\$key: \${value.toString().trim('"')}"
+                        "$key: ${value.toString().trim('"')}"
                     }
                     Column(Modifier.fillMaxWidth().background(Bg, RoundedCornerShape(10.dp)).padding(12.dp)) {
                         Text(label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
