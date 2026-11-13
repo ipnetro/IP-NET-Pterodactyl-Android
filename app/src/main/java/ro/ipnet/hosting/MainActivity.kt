@@ -52,6 +52,10 @@ private fun IpNetApp() {
     var filesLoading by remember { mutableStateOf(false) }
     var filesError by remember { mutableStateOf<String?>(null) }
     var managementServer by remember { mutableStateOf<GameServer?>(null) }
+    var editorFile by remember { mutableStateOf<String?>(null) }
+    var editorContent by remember { mutableStateOf("") }
+    var folderDialog by remember { mutableStateOf(false) }
+    var folderName by remember { mutableStateOf("") }
     var consoleCommand by remember { mutableStateOf("") }
     val consoleLines = remember { mutableStateListOf<String>() }
     var consoleSocket by remember { mutableStateOf<WebSocket?>(null) }
@@ -177,6 +181,7 @@ private fun IpNetApp() {
                                 Text(fileDirectory, color = Muted, fontSize = 11.sp)
                                 Spacer(Modifier.height(10.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = { folderDialog = true }, colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)) { Text("DOSAR NOU") }
                                     OutlinedButton(onClick = {
                                         if (fileDirectory != "/") fileDirectory = fileDirectory.substringBeforeLast('/', "").ifBlank { "/" }
                                     }, enabled = fileDirectory != "/", colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("ÎNAPOI") }
@@ -206,10 +211,71 @@ private fun IpNetApp() {
                                             if (!entry.isFile) TextButton(onClick = {
                                                 fileDirectory = if (fileDirectory == "/") "/" + entry.name else fileDirectory + "/" + entry.name
                                             }) { Text("DESCHIDE", color = Red, fontSize = 10.sp) }
+                                            else TextButton(onClick = {
+                                                val selected = filesServer
+                                                val client = api
+                                                if (selected != null && client != null) scope.launch {
+                                                    runCatching { client.readFile(selected.identifier, if (fileDirectory == "/") "/${entry.name}" else "$fileDirectory/${entry.name}") }
+                                                        .onSuccess { editorFile = if (fileDirectory == "/") "/${entry.name}" else "$fileDirectory/${entry.name}"; editorContent = it }
+                                                        .onFailure { filesError = it.message ?: "Nu pot deschide fișierul." }
+                                                }
+                                            }) { Text("EDITEAZĂ", color = Red, fontSize = 10.sp) }
                                         }
                                     }
                                 }
                                 TextButton(onClick = { filesServer = null }, modifier = Modifier.align(Alignment.End)) { Text("ÎNCHIDE", color = Red) }
+                            }
+                        }
+                    }
+
+                    if (folderDialog && filesServer != null) {
+                        AlertDialog(
+                            onDismissRequest = { folderDialog = false },
+                            title = { Text("Dosar nou") },
+                            text = { OutlinedTextField(value = folderName, onValueChange = { folderName = it }, label = { Text("Numele dosarului") }, singleLine = true) },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    val selected = filesServer
+                                    val client = api
+                                    val name = folderName.trim()
+                                    if (selected != null && client != null && name.isNotBlank()) scope.launch {
+                                        runCatching { client.createFolder(selected.identifier, fileDirectory, name) }
+                                            .onSuccess { filesError = null; serverFiles = client.listFiles(selected.identifier, fileDirectory) }
+                                            .onFailure { filesError = it.message ?: "Crearea dosarului a eșuat." }
+                                        folderName = ""
+                                        folderDialog = false
+                                    }
+                                }) { Text("CREEAZĂ", color = Red) }
+                            },
+                            dismissButton = { TextButton(onClick = { folderDialog = false }) { Text("ANULEAZĂ") } },
+                            containerColor = Panel,
+                            titleContentColor = Color.White,
+                            textContentColor = Color.White
+                        )
+                    }
+                    if (editorFile != null) {
+                        Dialog(onDismissRequest = { editorFile = null }) {
+                            Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).background(Panel, RoundedCornerShape(16.dp)).padding(14.dp)) {
+                                Text("EDITOR FIȘIER", color = Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Text(editorFile!!, color = Color.White, fontSize = 14.sp)
+                                OutlinedTextField(
+                                    value = editorContent, onValueChange = { editorContent = it },
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Red, unfocusedBorderColor = Muted)
+                                )
+                                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                                    TextButton(onClick = { editorFile = null }) { Text("ANULEAZĂ", color = Muted) }
+                                    Button(onClick = {
+                                        val selected = filesServer
+                                        val client = api
+                                        val path = editorFile
+                                        if (selected != null && client != null && path != null) scope.launch {
+                                            runCatching { client.writeFile(selected.identifier, path, editorContent) }
+                                                .onSuccess { filesError = "Fișier salvat cu succes."; editorFile = null }
+                                                .onFailure { filesError = it.message ?: "Salvarea a eșuat." }
+                                        }
+                                    }, colors = ButtonDefaults.buttonColors(containerColor = Red)) { Text("SALVEAZĂ") }
+                                }
                             }
                         }
                     }
