@@ -26,9 +26,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Install Android SDK platform
-        run: |
-          yes | sdkmanager --licenses >/dev/null
-          sdkmanager "platforms;android-35"
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '12266719'
+          accept-android-sdk-licenses: true
+          packages: 'platform-tools platforms;android-35'
       - name: Compile Kotlin source only (no APK packaging)
         run: gradle :app:compileDebugKotlin --no-daemon
