@@ -57,6 +57,7 @@ private fun IpNetApp() {
     var filesLoading by remember { mutableStateOf(false) }
     var filesError by remember { mutableStateOf<String?>(null) }
     var managementServer by remember { mutableStateOf<GameServer?>(null) }
+    var managementSection by remember { mutableStateOf("BACKUP-URI") }
     var editorFile by remember { mutableStateOf<String?>(null) }
     var editorContent by remember { mutableStateOf("") }
     var folderDialog by remember { mutableStateOf(false) }
@@ -191,7 +192,7 @@ private fun IpNetApp() {
                         }
                     }
                     if (managementServer != null) {
-                        ManagementDialog(server = managementServer!!, api = api!!, onDismiss = { managementServer = null })
+                        ManagementDialog(server = managementServer!!, api = api!!, initialSection = managementSection, onDismiss = { managementServer = null })
                     }
                     if (filesServer != null) {
                         Dialog(onDismissRequest = { filesServer = null }) {
@@ -397,9 +398,18 @@ private fun IpNetApp() {
                                     menuOpen = false
                                     val selected = servers.firstOrNull()
                                     when (item) {
+                                        "DASHBOARD", "MY SERVERS" -> Unit
                                         "CONSOLE" -> if (selected != null) consoleServer = selected
                                         "FILE MANAGER" -> if (selected != null) { filesServer = selected; fileDirectory = "/" }
-                                        "DATABASES", "SCHEDULES", "ACCESS CONTROL", "BACKUPS", "NETWORK", "TOOLS" -> if (selected != null) managementServer = selected
+                                        "DATABASES" -> if (selected != null) { managementSection = "BAZE DE DATE"; managementServer = selected }
+                                        "SCHEDULES" -> if (selected != null) { managementSection = "SCHEDULES"; managementServer = selected }
+                                        "ACCESS CONTROL" -> if (selected != null) { managementSection = "UTILIZATORI"; managementServer = selected }
+                                        "BACKUPS" -> if (selected != null) { managementSection = "BACKUP-URI"; managementServer = selected }
+                                        "NETWORK" -> if (selected != null) { managementSection = "REȚEA"; managementServer = selected }
+                                        "SERVER CONFIG", "SETTINGS", "TOOLS" -> if (selected != null) {
+                                            managementSection = item
+                                            managementServer = selected
+                                        }
                                     }
                                 }, modifier = Modifier.fillMaxWidth()) { Text(item, color = Color.White, modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.SemiBold) }
                             }
@@ -468,8 +478,8 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
 }
 
 @Composable
-private fun ManagementDialog(server: GameServer, api: PterodactylApi, onDismiss: () -> Unit) {
-    var section by remember { mutableStateOf("BACKUP-URI") }
+private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSection: String, onDismiss: () -> Unit) {
+    var section by remember(server.identifier, initialSection) { mutableStateOf(initialSection) }
     var rows by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -524,6 +534,16 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, onDismiss:
                 TextButton(onClick = { refresh() }) { Text("ACTUALIZEAZĂ", color = Color.White, fontSize = 9.sp) }
             }
             Divider(color = Muted.copy(alpha = 0.25f))
+            if (section in setOf("SERVER CONFIG", "SETTINGS", "TOOLS")) {
+                Text(
+                    when (section) {
+                        "SERVER CONFIG" -> "Setările de configurare ale serverului nu sunt expuse de Client API pentru acest cont. Nu afișăm controale false."
+                        "SETTINGS" -> "Setările aplicației și ale conexiunii sunt gestionate separat. Cheia API nu este salvată."
+                        else -> "Instrumentele disponibile depind de permisiunile serverului. Funcțiile indisponibile nu vor fi simulate."
+                    },
+                    color = Muted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 12.dp)
+                )
+            }
             if (section == "BACKUP-URI") {
                 OutlinedTextField(
                     value = backupName, onValueChange = { backupName = it },
