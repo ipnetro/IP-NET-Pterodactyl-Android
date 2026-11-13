@@ -26,9 +26,9 @@ class PterodactylApi {
                         name = attributes.optString("name", "Server"),
                         description = attributes.optString("description"),
                         status = attributes.optString("current_state", "offline"),
-                        cpuText = "Limită ${limits.optDouble("cpu", 0.0).toInt()}%",
-                        memoryText = "Limită ${formatBytes(limits.optLong("memory", 0L) * 1024L * 1024L)}",
-                        diskText = "Limită ${formatBytes(limits.optLong("disk", 0L) * 1024L * 1024L)}"
+                        cpuLimit = limits.optDouble("cpu", 0.0).toInt(),
+                        memoryLimitBytes = limits.optLong("memory", 0L) * 1024L * 1024L,
+                        diskLimitBytes = limits.optLong("disk", 0L) * 1024L * 1024L
                     )
                 )
             }
@@ -42,9 +42,11 @@ class PterodactylApi {
         val currentState = attributes.optString("current_state", server.status)
         server.copy(
             status = currentState,
-            cpuText = String.format(Locale.US, "%.1f%%", resources.optDouble("cpu_absolute", 0.0)),
-            memoryText = formatBytes(resources.optLong("memory_bytes", 0L)),
-            diskText = formatBytes(resources.optLong("disk_bytes", 0L))
+            cpuText = if (server.cpuLimit > 0)
+                String.format(Locale.US, "%.1f%% / %d%%", resources.optDouble("cpu_absolute", 0.0), server.cpuLimit)
+            else String.format(Locale.US, "%.1f%% / Nelimitat", resources.optDouble("cpu_absolute", 0.0)),
+            memoryText = "${formatBytes(resources.optLong("memory_bytes", 0L))} / ${formatLimit(server.memoryLimitBytes)}",
+            diskText = "${formatBytes(resources.optLong("disk_bytes", 0L))} / ${formatLimit(server.diskLimitBytes)}"
         )
     }
 
@@ -95,6 +97,9 @@ class PterodactylApi {
             connection.disconnect()
         }
     }
+
+    private fun formatLimit(bytes: Long): String =
+        if (bytes <= 0L) "Nelimitat" else formatBytes(bytes)
 
     private fun formatBytes(bytes: Long): String {
         if (bytes <= 0L) return "0 MB"
