@@ -56,6 +56,8 @@ private fun IpNetApp() {
     var editorContent by remember { mutableStateOf("") }
     var folderDialog by remember { mutableStateOf(false) }
     var folderName by remember { mutableStateOf("") }
+    var fileActionTarget by remember { mutableStateOf<ServerFile?>(null) }
+    var renameValue by remember { mutableStateOf("") }
     var consoleCommand by remember { mutableStateOf("") }
     val consoleLines = remember { mutableStateListOf<String>() }
     var consoleSocket by remember { mutableStateOf<WebSocket?>(null) }
@@ -220,6 +222,9 @@ private fun IpNetApp() {
                                                         .onFailure { filesError = it.message ?: "Nu pot deschide fișierul." }
                                                 }
                                             }) { Text("EDITEAZĂ", color = Red, fontSize = 10.sp) }
+                                            TextButton(onClick = { fileActionTarget = entry; renameValue = entry.name }) {
+                                                Text("MAI MULT", color = Muted, fontSize = 9.sp)
+                                            }
                                         }
                                     }
                                 }
@@ -228,6 +233,49 @@ private fun IpNetApp() {
                         }
                     }
 
+
+                    if (fileActionTarget != null && filesServer != null) {
+                        val target = fileActionTarget!!
+                        AlertDialog(
+                            onDismissRequest = { fileActionTarget = null },
+                            title = { Text(target.name) },
+                            text = {
+                                Column {
+                                    OutlinedTextField(value = renameValue, onValueChange = { renameValue = it }, label = { Text("Redenumește") }, singleLine = true)
+                                    Text(if (target.isFile) "Fișier" else "Dosar", color = Muted, fontSize = 11.sp)
+                                }
+                            },
+                            confirmButton = {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    TextButton(onClick = {
+                                        val selected = filesServer
+                                        val client = api
+                                        val newName = renameValue.trim()
+                                        if (selected != null && client != null && newName.isNotBlank() && newName != target.name) scope.launch {
+                                            runCatching { client.renameFile(selected.identifier, fileDirectory, target.name, newName) }
+                                                .onSuccess { serverFiles = client.listFiles(selected.identifier, fileDirectory); filesError = "Element redenumit." }
+                                                .onFailure { filesError = it.message ?: "Redenumirea a eșuat." }
+                                            fileActionTarget = null
+                                        }
+                                    }) { Text("REDENUMIRE", color = Red) }
+                                    TextButton(onClick = {
+                                        val selected = filesServer
+                                        val client = api
+                                        if (selected != null && client != null) scope.launch {
+                                            runCatching { client.deleteFiles(selected.identifier, fileDirectory, listOf(target.name)) }
+                                                .onSuccess { serverFiles = client.listFiles(selected.identifier, fileDirectory); filesError = "Element șters." }
+                                                .onFailure { filesError = it.message ?: "Ștergerea a eșuat." }
+                                            fileActionTarget = null
+                                        }
+                                    }) { Text("ȘTERGE", color = Color(0xFFFF687D)) }
+                                }
+                            },
+                            dismissButton = { TextButton(onClick = { fileActionTarget = null }) { Text("ANULEAZĂ") } },
+                            containerColor = Panel,
+                            titleContentColor = Color.White,
+                            textContentColor = Color.White
+                        )
+                    }
                     if (folderDialog && filesServer != null) {
                         AlertDialog(
                             onDismissRequest = { folderDialog = false },
