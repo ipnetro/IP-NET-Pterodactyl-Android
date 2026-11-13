@@ -9,28 +9,38 @@ import java.net.URL
 import java.util.Locale
 
 private const val PANEL_BASE_URL = "https://ptero.ip-net.ro"
+private const val MAX_SERVER_PAGES = 100
 
 class PterodactylApi {
     suspend fun getServers(apiKey: String): List<ServerUi> = withContext(Dispatchers.IO) {
-        val json = request(apiKey, "GET", "/api/client/servers")
-        val data = json.optJSONArray("data") ?: JSONArray()
-        buildList {
+        val result = mutableListOf<ServerUi>()
+        var page = 1
+        var totalPages: Int
+        do {
+            val suffix = if (page == 1) "" else "?page=$page"
+            val json = request(apiKey, "GET", "/api/client/servers$suffix")
+            val data = json.optJSONArray("data") ?: JSONArray()
             for (index in 0 until data.length()) {
                 val attributes = data.optJSONObject(index)?.optJSONObject("attributes") ?: continue
+                val identifier = attributes.optString("identifier")
+                if (identifier.isBlank()) continue
                 val limits = attributes.optJSONObject("limits") ?: JSONObject()
-                add(
-                    ServerUi(
-                        identifier = attributes.optString("identifier"),
-                        name = attributes.optString("name", "Server"),
-                        description = attributes.optString("description"),
-                        status = attributes.optString("current_state", "offline"),
-                        cpuLimit = limits.optDouble("cpu", 0.0).toInt(),
-                        memoryLimitBytes = limits.optLong("memory", 0L) * 1024L * 1024L,
-                        diskLimitBytes = limits.optLong("disk", 0L) * 1024L * 1024L
-                    )
+                result += ServerUi(
+                    identifier = identifier,
+                    name = attributes.optString("name", "Server"),
+                    description = attributes.optString("description"),
+                    status = attributes.optString("current_state", "offline"),
+                    cpuLimit = limits.optDouble("cpu", 0.0).toInt(),
+                    memoryLimitBytes = limits.optLong("memory", 0L) * 1024L * 1024L,
+                    diskLimitBytes = limits.optLong("disk", 0L) * 1024L * 1024L
                 )
             }
-        }
+            totalPages = json.optJSONObject("meta")
+                ?.optJSONObject("pagination")
+                ?.optInt("total_pages", 1) ?: 1
+            page++
+        } while (page <= totalPages.coerceAtMost(MAX_SERVER_PAGES))
+        result
     }
 
     suspend fun getResources(apiKey: String, server: ServerUi): ServerUi = withContext(Dispatchers.IO) {
