@@ -39,3 +39,6 @@ with ZipFile(archive) as z:
     report += ["[text_matches]", *matches[:3000], ""]
     (out / "inspection-report.txt").write_text("\n".join(report), encoding="utf-8")
     print("\n".join(report[:120]))
+    print("[KEY TEXT MATCHES]")
+    for item in matches:
+        print(item)
