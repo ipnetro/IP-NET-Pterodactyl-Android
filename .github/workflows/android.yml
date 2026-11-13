@@ -7,7 +7,7 @@ on:
       - '.github/workflows/android.yml'
       - 'qgs-ipnet-modified-source.zip'
       - 'ipnet_hosting_logo.png'
-      - 'scripts/**'
+      - 'scripts/**'\n      - 'qgs-ipnet-rebrand/**'
   workflow_dispatch:
 
 permissions:
@@ -84,6 +84,16 @@ jobs:
           p.write_text(s, encoding="utf-8")
           print("Manifest package:", re.search(r'package="([^"]+)"', s).group(1))
           PY
+      - name: Verify IP-NET app identity and panel target
+        run: |
+          set -eu
+          SRC="$RUNNER_TEMP/qgs-src/qgs-ipnet-modified"
+          test -f "$SRC/smali/com/qgs/hosting/MainActivity.smali"
+          grep -Fq 'https://ptero.ip-net.ro' "$SRC/smali/com/qgs/hosting/MainActivity.smali"
+          grep -Fq 'package="ro.ipnet.hosting"' "$SRC/AndroidManifest.xml"
+          grep -Fq '<string name="app_name">IP-NET Hosting</string>' "$SRC/res/values/strings.xml"
+          echo 'Verified: original QGS Android shell, IP-NET package/name, and Pterodactyl panel URL.'
+
       - name: Inspect QGS resources before rebranding
         run: python3 scripts/inspect_qgs_source.py
       - name: Upload QGS source inspection
