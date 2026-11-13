@@ -4,6 +4,7 @@
     <application
         android:allowBackup="false"
         android:label="IP-NET Hosting"
+        android:icon="@drawable/ipnet_logo"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
         <activity
