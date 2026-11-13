@@ -1,4 +1,4 @@
-name: Native Android source checks (no APK)
+name: Native Kotlin validation (no APK output)
 
 on:
   push:
