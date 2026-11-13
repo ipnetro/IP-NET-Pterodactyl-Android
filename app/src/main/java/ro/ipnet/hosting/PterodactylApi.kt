@@ -4,8 +4,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
@@ -81,7 +79,7 @@ class PterodactylApi {
         try {
             val code = connection.responseCode
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-            val response = stream?.bufferedReader()?.use(BufferedReader::readText).orEmpty()
+            val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
             if (code !in 200..299) {
                 val detail = runCatching {
                     JSONObject(response).optJSONArray("errors")?.optJSONObject(0)?.optString("detail")
