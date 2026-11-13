@@ -65,6 +65,25 @@ jobs:
           p.write_text(s)
           PY
 
+      - name: Rebrand Android package identity
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, re
+          p = Path(os.environ["RUNNER_TEMP"]) / "qgs-src/qgs-ipnet-modified/AndroidManifest.xml"
+          s = p.read_text(encoding="utf-8")
+          # Keep the original QGS activity/class names, but give this app a
+          # distinct Android package so Android installs it alongside QGS.
+          s = re.sub(r'(?<=package=")qgs\\.hosting\\.com(?=")', 'ro.ipnet.hosting', s)
+          s = s.replace('qgs.hosting.com.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION',
+                        'ro.ipnet.hosting.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION')
+          s = s.replace('qgs.hosting.com.androidx-startup',
+                        'ro.ipnet.hosting.androidx-startup')
+          if 'package="ro.ipnet.hosting"' not in s:
+              raise SystemExit("Package identity was not updated; refusing to build")
+          p.write_text(s, encoding="utf-8")
+          print("Manifest package:", re.search(r'package="([^"]+)"', s).group(1))
+          PY
       - name: Inspect QGS resources before rebranding
         run: python3 scripts/inspect_qgs_source.py
       - name: Upload QGS source inspection
