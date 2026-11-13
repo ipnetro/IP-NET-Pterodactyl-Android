@@ -56,8 +56,12 @@ class PterodactylApi(private val apiKey: String) {
                 .header("Authorization", "Bearer $apiKey")
                 .header("Accept", "Application/vnd.pterodactyl.v1+json")
                 .header("Content-Type", "application/json")
-            when (method) {
-                "POST" -> builder.post((body ?: "{}").toRequestBody("application/json".toMediaType()))
+            val requestBody = body?.toRequestBody("application/json".toMediaType())
+            when (method.uppercase()) {
+                "POST" -> builder.post(requestBody ?: "{}".toRequestBody("application/json".toMediaType()))
+                "PUT" -> builder.put(requestBody ?: "{}".toRequestBody("application/json".toMediaType()))
+                "PATCH" -> builder.patch(requestBody ?: "{}".toRequestBody("application/json".toMediaType()))
+                "DELETE" -> if (requestBody != null) builder.delete(requestBody) else builder.delete()
                 else -> builder.get()
             }
             client.newCall(builder.build()).execute().use { response ->
@@ -185,6 +189,99 @@ class PterodactylApi(private val apiKey: String) {
                 mimeType = a.get("mimetype")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
             )
         }.sortedWith(compareBy<ServerFile> { it.isFile }.thenBy { it.name.lowercase() })
+    }
+
+
+    private fun enc(value: String): String =
+        java.net.URLEncoder.encode(value, Charsets.UTF_8.name()).replace("+", "%20")
+
+    private fun serverPath(identifier: String, suffix: String): String =
+        "/api/client/servers/$identifier/$suffix"
+
+    private suspend fun dataList(path: String): List<JsonObject> {
+        val root = JsonParser.parseString(request(path)).asJsonObject
+        return root.getAsJsonArray("data")?.mapNotNull { it.asJsonObject.getAsJsonObject("attributes") } ?: emptyList()
+    }
+
+    suspend fun readFile(identifier: String, file: String): String =
+        request(serverPath(identifier, "files/contents?file=\${enc(file)}"))
+
+    suspend fun writeFile(identifier: String, file: String, content: String) {
+        request(serverPath(identifier, "files/write?file=\${enc(file)}"), "POST", content)
+    }
+
+    suspend fun createFolder(identifier: String, directory: String, name: String) {
+        val body = JsonObject().apply { addProperty("root", directory); addProperty("name", name) }
+        request(serverPath(identifier, "files/create-folder"), "POST", body.toString())
+    }
+
+    suspend fun deleteFiles(identifier: String, directory: String, names: List<String>) {
+        val body = JsonObject().apply {
+            addProperty("root", directory)
+            add("files", com.google.gson.JsonArray().apply { names.forEach { add(it) } })
+        }
+        request(serverPath(identifier, "files/delete"), "POST", body.toString())
+    }
+
+    suspend fun renameFile(identifier: String, directory: String, from: String, to: String) {
+        val body = JsonObject().apply {
+            addProperty("root", directory)
+            add("files", com.google.gson.JsonArray().apply {
+                add(JsonObject().apply { addProperty("from", from); addProperty("to", to) })
+            })
+        }
+        request(serverPath(identifier, "files/rename"), "PUT", body.toString())
+    }
+
+    suspend fun compressFiles(identifier: String, directory: String, files: List<String>) {
+        val body = JsonObject().apply {
+            addProperty("root", directory)
+            add("files", com.google.gson.JsonArray().apply { files.forEach { add(it) } })
+        }
+        request(serverPath(identifier, "files/compress"), "POST", body.toString())
+    }
+
+    suspend fun decompressFile(identifier: String, directory: String, file: String) {
+        val body = JsonObject().apply { addProperty("root", directory); addProperty("file", file) }
+        request(serverPath(identifier, "files/decompress"), "POST", body.toString())
+    }
+
+    suspend fun backups(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "backups"))
+
+    suspend fun createBackup(identifier: String, name: String) {
+        val body = JsonObject().apply { if (name.isNotBlank()) addProperty("name", name) }
+        request(serverPath(identifier, "backups"), "POST", body.toString())
+    }
+
+    suspend fun deleteBackup(identifier: String, backupId: String) {
+        request(serverPath(identifier, "backups/$backupId"), "DELETE")
+    }
+
+    suspend fun databases(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "databases"))
+
+    suspend fun createDatabase(identifier: String, name: String, remote: String = "%") {
+        val body = JsonObject().apply { addProperty("database", name); addProperty("remote", remote) }
+        request(serverPath(identifier, "databases"), "POST", body.toString())
+    }
+
+    suspend fun rotateDatabasePassword(identifier: String, databaseId: String) {
+        request(serverPath(identifier, "databases/$databaseId/rotate-password"), "POST", "{}")
+    }
+
+    suspend fun schedules(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "schedules"))
+
+    suspend fun subusers(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "users"))
+
+    suspend fun allocations(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "network/allocations"))
+
+    suspend fun signedFileDownload(identifier: String, file: String): String {
+        val root = JsonParser.parseString(request(serverPath(identifier, "files/download?file=\${enc(file)}"))).asJsonObject
+        return root.getAsJsonObject("attributes").get("url").asString
+    }
+
+    suspend fun signedBackupDownload(identifier: String, backupId: String): String {
+        val root = JsonParser.parseString(request(serverPath(identifier, "backups/$backupId/download"))).asJsonObject
+        return root.getAsJsonObject("attributes").get("url").asString
     }
 
     suspend fun resources(identifier: String): JsonObject =
