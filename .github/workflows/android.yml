@@ -65,6 +65,16 @@ jobs:
           p.write_text(s)
           PY
 
+      - name: Inspect QGS resources before rebranding
+        run: python3 scripts/inspect_qgs_source.py
+      - name: Upload QGS source inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: QGS-source-inspection
+          path: ${{ runner.temp }}/qgs-inspection/
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Build unsigned APK
         run: |
           apktool b "$RUNNER_TEMP/qgs-src/qgs-ipnet-modified" -o "$RUNNER_TEMP/IP-NET-Hosting-unsigned.apk"
