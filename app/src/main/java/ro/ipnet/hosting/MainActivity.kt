@@ -51,6 +51,7 @@ private fun IpNetApp() {
     var error by remember { mutableStateOf<String?>(null) }
     var api by remember { mutableStateOf<PterodactylApi?>(null) }
     var consoleServer by remember { mutableStateOf<GameServer?>(null) }
+    var infoServer by remember { mutableStateOf<GameServer?>(null) }
     var filesServer by remember { mutableStateOf<GameServer?>(null) }
     var fileDirectory by remember { mutableStateOf("/") }
     var serverFiles by remember { mutableStateOf<List<ServerFile>>(emptyList()) }
@@ -179,7 +180,7 @@ private fun IpNetApp() {
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(servers, key = { it.identifier }) { server ->
-                            ServerCard(server, busy, api, onConsole = { consoleServer = server }, onFiles = { filesServer = server; fileDirectory = "/" }, onManage = { managementServer = server }, onPower = { action ->
+                            ServerCard(server, busy, api, onInfo = { infoServer = server }, onConsole = { consoleServer = server }, onFiles = { filesServer = server; fileDirectory = "/" }, onManage = { managementServer = server }, onPower = { action ->
                                 scope.launch {
                                     busy = true; error = null
                                     try {
@@ -191,6 +192,7 @@ private fun IpNetApp() {
                             })
                         }
                     }
+                    if (infoServer != null) ServerInfoDialog(infoServer!!, api!!, onDismiss = { infoServer = null })
                     if (managementServer != null) {
                         ManagementDialog(server = managementServer!!, api = api!!, initialSection = managementSection, onDismiss = { managementServer = null })
                     }
@@ -424,7 +426,7 @@ private fun IpNetApp() {
 }
 
 @Composable
-private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, onConsole: () -> Unit, onFiles: () -> Unit, onManage: () -> Unit, onPower: (String) -> Unit) {
+private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, onInfo: () -> Unit, onConsole: () -> Unit, onFiles: () -> Unit, onManage: () -> Unit, onPower: (String) -> Unit) {
     var stats by remember(server.identifier) { mutableStateOf<ResourceStats?>(null) }
     LaunchedEffect(server.identifier, api) {
         while (api != null) {
@@ -467,6 +469,7 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
             modifier = Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF22B7E9), trackColor = Color(0xFF263241))
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = onInfo, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)) { Text("INFO", fontSize = 10.sp) }
             OutlinedButton(onClick = onConsole, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("CONSOLE", fontSize = 10.sp) }
             OutlinedButton(onClick = onFiles, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp),
@@ -638,6 +641,60 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
             }
         }
     }
+}
+
+@Composable
+private fun ServerInfoDialog(server: GameServer, api: PterodactylApi, onDismiss: () -> Unit) {
+    var stats by remember(server.identifier) { mutableStateOf<ResourceStats?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(server.identifier) {
+        loading = true
+        runCatching { api.resourceStats(server.identifier) }
+            .onSuccess { stats = it }
+            .onFailure { error = it.message ?: "Statisticile nu sunt disponibile." }
+        loading = false
+    }
+    Dialog(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().fillMaxHeight(0.78f).background(Panel, RoundedCornerShape(18.dp)).padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("SERVER INFORMATION", color = Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(server.name, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
+            Text(server.identifier, color = Muted, fontSize = 12.sp)
+            HorizontalDivider(color = Color(0xFF303642))
+            InfoLine("STATUS", if (server.isSuspended) "SUSPENDED" else stats?.state?.uppercase() ?: server.status?.uppercase() ?: "UNKNOWN")
+            InfoLine("DESCRIPTION", server.description.ifBlank { "—" })
+            InfoLine("CPU LIMIT", "${server.cpu}%")
+            InfoLine("MEMORY LIMIT", "${server.memory} MB")
+            InfoLine("DISK LIMIT", "${server.disk} MB")
+            HorizontalDivider(color = Color(0xFF303642))
+            Text("LIVE RESOURCE USAGE", color = Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            InfoLine("CPU", stats?.let { "%.1f%%".format(it.cpuPercent) } ?: "—")
+            InfoLine("MEMORY", stats?.let { formatFileSize(it.memoryBytes) } ?: "—")
+            InfoLine("STORAGE", stats?.let { formatFileSize(it.diskBytes) } ?: "—")
+            InfoLine("UPTIME", stats?.let { formatUptime(it.uptimeMillis) } ?: "—")
+            if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
+            error?.let { Text(it, color = Color(0xFFFF687D), fontSize = 11.sp) }
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("CLOSE", color = Red) }
+        }
+    }
+}
+
+@Composable
+private fun InfoLine(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+        Text(label, color = Muted, fontSize = 11.sp, modifier = Modifier.weight(0.9f))
+        Text(value, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1.1f))
+    }
+}
+
+private fun formatUptime(milliseconds: Long): String {
+    if (milliseconds <= 0L) return "—"
+    val totalSeconds = milliseconds / 1000L
+    val days = totalSeconds / 86400L
+    val hours = (totalSeconds % 86400L) / 3600L
+    val minutes = (totalSeconds % 3600L) / 60L
+    return if (days > 0) "${days}d ${hours}h ${minutes}m" else "${hours}h ${minutes}m"
 }
 
 @Composable
