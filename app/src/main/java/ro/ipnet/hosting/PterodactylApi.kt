@@ -79,21 +79,41 @@ class PterodactylApi(private val apiKey: String) {
         }
 
     suspend fun servers(): List<GameServer> {
-        val root = JsonParser.parseString(request("/api/client")).asJsonObject
-        return root.getAsJsonArray("data").map { item ->
-            val a = item.asJsonObject.getAsJsonObject("attributes")
-            val limits = a.getAsJsonObject("limits")
-            GameServer(
-                identifier = a.get("identifier").asString,
-                name = a.get("name").asString,
-                description = a.get("description")?.asString ?: "",
-                status = a.get("status")?.takeUnless { it.isJsonNull }?.asString,
-                isSuspended = a.get("is_suspended")?.asBoolean ?: false,
-                memory = limits.get("memory").asInt,
-                disk = limits.get("disk").asInt,
-                cpu = limits.get("cpu").asInt
-            )
-        }
+        val result = mutableListOf<GameServer>()
+        var page = 1
+        var totalPages = 1
+        do {
+            val suffix = if (page == 1) "" else "?page=$page"
+            val root = JsonParser.parseString(request("/api/client$suffix")).asJsonObject
+            val data = root.getAsJsonArray("data")
+            data?.forEach { item ->
+                val attributes = item.asJsonObject.getAsJsonObject("attributes")
+                val limits = attributes.getAsJsonObject("limits")
+                val identifier = attributes.get("identifier")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                if (identifier.isNotBlank()) {
+                    result += GameServer(
+                        identifier = identifier,
+                        name = attributes.get("name")?.takeUnless { it.isJsonNull }?.asString ?: "Server",
+                        description = attributes.get("description")?.takeUnless { it.isJsonNull }?.asString.orEmpty(),
+                        status = attributes.get("status")?.takeUnless { it.isJsonNull }?.asString,
+                        isSuspended = attributes.get("is_suspended")?.takeUnless { it.isJsonNull }?.asBoolean ?: false,
+                        memory = limits.get("memory")?.takeUnless { it.isJsonNull }?.asInt ?: 0,
+                        disk = limits.get("disk")?.takeUnless { it.isJsonNull }?.asInt ?: 0,
+                        cpu = limits.get("cpu")?.takeUnless { it.isJsonNull }?.asInt ?: 0
+                    )
+                }
+            }
+            totalPages = root.getAsJsonObject("meta")
+                ?.getAsJsonObject("pagination")
+                ?.get("total_pages")
+                ?.takeUnless { it.isJsonNull }
+                ?.asInt ?: 1
+            require(totalPages <= 100) {
+                "Contul depășește limita de 100 de pagini de servere acceptată de aplicație."
+            }
+            page++
+        } while (page <= totalPages)
+        return result
     }
 
     suspend fun power(identifier: String, signal: String) {
