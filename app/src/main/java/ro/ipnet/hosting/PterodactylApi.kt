@@ -270,6 +270,25 @@ class PterodactylApi(private val apiKey: String) {
 
     suspend fun schedules(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "schedules"))
 
+    suspend fun createSchedule(identifier: String, name: String, cron: String) {
+        val fields = cron.trim().split(Regex("\\s+"))
+        require(fields.size == 5) { "Programul trebuie să aibă 5 câmpuri cron: minută oră zi-lună lună zi-săptămână." }
+        val body = JsonObject().apply {
+            addProperty("name", name)
+            addProperty("minute", fields[0])
+            addProperty("hour", fields[1])
+            addProperty("day_of_month", fields[2])
+            addProperty("month", fields[3])
+            addProperty("day_of_week", fields[4])
+            addProperty("is_active", true)
+        }
+        request(serverPath(identifier, "schedules"), "POST", body.toString())
+    }
+
+    suspend fun deleteSchedule(identifier: String, scheduleId: String) {
+        request(serverPath(identifier, "schedules/$scheduleId"), "DELETE")
+    }
+
     suspend fun subusers(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "users"))
 
     suspend fun allocations(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "network/allocations"))
