@@ -72,7 +72,13 @@ class PterodactylApi(private val apiKey: String) {
                             .getAsJsonArray("errors")?.get(0)
                             ?.asJsonObject?.get("detail")?.asString
                     }.getOrNull()
-                    throw IllegalStateException(detail ?: "Eroare API HTTP ${response.code}")
+                    val fallback = when (response.code) {
+                        401, 403 -> "Cheia Client API este invalidă sau nu are permisiunile necesare."
+                        404 -> "Resursa nu a fost găsită în panoul Pterodactyl."
+                        429 -> "Prea multe solicitări. Încearcă din nou în câteva secunde."
+                        else -> "Eroare API Pterodactyl (HTTP ${response.code})."
+                    }
+                    throw IllegalStateException(detail?.takeIf { it.isNotBlank() } ?: fallback)
                 }
                 text
             }
