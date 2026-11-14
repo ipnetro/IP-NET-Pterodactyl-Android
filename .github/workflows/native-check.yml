@@ -1,4 +1,5 @@
 name: IP-NET Hosting validation and final APK release
+# Final APK build requested after source validation.
 
 on:
   push:
