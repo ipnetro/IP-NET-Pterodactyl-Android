@@ -280,7 +280,7 @@ private fun IpNetApp() {
                         ManagementDialog(server = managementServer!!, api = api!!, initialSection = managementSection, onDismiss = { managementServer = null })
                     }
                     if (filesServer != null) {
-                        Dialog(onDismissRequest = { filesServer = null }) {
+                        Dialog(onDismissRequest = { filesServer = null; editorFile = null; fileActionTarget = null; confirmFileDelete = false; folderDialog = false }) {
                             Column(Modifier.fillMaxWidth().fillMaxHeight(0.82f).background(Panel, RoundedCornerShape(16.dp)).padding(16.dp)) {
                                 Text("MANAGER FIȘIERE", color = Red, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 Text(filesServer!!.name, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
@@ -332,7 +332,7 @@ private fun IpNetApp() {
                                         }
                                     }
                                 }
-                                TextButton(onClick = { filesServer = null }, modifier = Modifier.align(Alignment.End)) { Text("ÎNCHIDE", color = Red) }
+                                TextButton(onClick = { filesServer = null; editorFile = null; fileActionTarget = null; confirmFileDelete = false; folderDialog = false }, modifier = Modifier.align(Alignment.End)) { Text("ÎNCHIDE", color = Red) }
                             }
                         }
                     }
@@ -530,7 +530,7 @@ private fun IpNetApp() {
                                     }, enabled = consoleSocket != null,
                                         colors = ButtonDefaults.buttonColors(containerColor = Red)) { Text("TRIMITE") }
                                 }
-                                TextButton(onClick = { consoleServer = null }, modifier = Modifier.align(Alignment.End)) { Text("ÎNCHIDE", color = Red) }
+                                TextButton(onClick = { consoleServer = null; consoleCommand = "" }, modifier = Modifier.align(Alignment.End)) { Text("ÎNCHIDE", color = Red) }
                             }
                         }
                     }
