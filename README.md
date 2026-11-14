@@ -71,6 +71,11 @@ GitHub Actions compilează sursa la schimbările proiectului și oferă un APK D
 
 Codul și aplicația sunt proprietare. Citește [LICENSE](LICENSE). Componentele terțe rămân sub licențele lor proprii.
 
+
+## Feedback și idei
+
+Ai o sugestie sau ai găsit o problemă? Deschide un [issue nou](https://github.com/ipnetro/IP-NET-Pterodactyl-Android/issues/new) și alege formularul potrivit. Citește [ghidul de feedback și contribuții](.github/CONTRIBUTING.md). Te rugăm să nu publici parole, chei API sau date private.
+
 ---
 
 **IP-NET Hosting**  
