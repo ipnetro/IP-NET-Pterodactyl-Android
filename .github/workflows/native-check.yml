@@ -1,4 +1,4 @@
-name: Native Kotlin source validation (no APK output)
+name: IP-NET Hosting validation and final APK release
 
 on:
   push:
