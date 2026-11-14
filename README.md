@@ -15,7 +15,7 @@ IP-NET Hosting is a native Android app built with Kotlin and Jetpack Compose for
 | Application ID | `ro.ipnet.hosting` |
 | Panel | [ptero.ip-net.ro](https://ptero.ip-net.ro) |
 | Minimum Android | 8.0 (API 26) |
-| Published version | 1.0.1 |
+| Published version | 1.0.2 |
 
 ### Features
 
@@ -52,9 +52,9 @@ Read the [privacy notice](PRIVACY.md) and [security instructions](SECURITY.md).
 
 ### Download
 
-Download the official APK from [GitHub Releases](https://github.com/ipnetro/IP-NET-Pterodactyl-Android/releases). The current published version is **1.0.1**.
+Download the official APK from [GitHub Releases](https://github.com/ipnetro/IP-NET-Pterodactyl-Android/releases). The current published version is **1.0.2**.
 
-Version 1.0.1 is signed as a Release build. The app stores the Client API key encrypted on the phone and reconnects when reopened. Later updates signed with the same key can be installed over the existing app without uninstalling it.
+Version 1.0.2 is signed as a Release build. The app stores the Client API key encrypted on the phone and reconnects when reopened. Later updates signed with the same key can be installed over the existing app without uninstalling it.
 
 ### Build and release
 
@@ -98,7 +98,7 @@ IP-NET Hosting este o aplicație Android nativă, construită cu Kotlin și Jetp
 | Application ID | `ro.ipnet.hosting` |
 | Panou | [ptero.ip-net.ro](https://ptero.ip-net.ro) |
 | Android minim | 8.0 (API 26) |
-| Versiune publicată | 1.0.1 |
+| Versiune publicată | 1.0.2 |
 
 ### Funcționalități
 
@@ -135,9 +135,9 @@ Consultă [nota de confidențialitate](PRIVACY.md) și [instrucțiunile de secur
 
 ### Descărcare
 
-Descarcă APK-ul oficial din [GitHub Releases](https://github.com/ipnetro/IP-NET-Pterodactyl-Android/releases). Versiunea publicată în prezent este **1.0.1**.
+Descarcă APK-ul oficial din [GitHub Releases](https://github.com/ipnetro/IP-NET-Pterodactyl-Android/releases). Versiunea publicată în prezent este **1.0.2**.
 
-Versiunea 1.0.1 este semnată Release. Aplicația păstrează cheia Client API criptată pe telefon și se reconectează la redeschidere. Actualizările publicate ulterior cu aceeași semnătură se instalează peste aplicație, fără dezinstalare.
+Versiunea 1.0.2 este semnată Release. Aplicația păstrează cheia Client API criptată pe telefon și se reconectează la redeschidere. Actualizările publicate ulterior cu aceeași semnătură se instalează peste aplicație, fără dezinstalare.
 
 ### Compilare și publicare
 
