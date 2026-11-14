@@ -931,6 +931,13 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                                 ) { Text("ȘTERGE BACKUP", color = Red, fontSize = 10.sp) }
                             }
                         }
+                        if (section == "UTILIZATORI") {
+                            val uuid = row.get("uuid")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                            TextButton(
+                                onClick = { pendingDelete = "subuser" to uuid },
+                                enabled = uuid.isNotBlank() && !loading
+                            ) { Text("REVOACĂ ACCESUL", color = Red, fontSize = 10.sp) }
+                        }
                         if (section == "BAZE DE DATE") {
                             val id = row.get("id")?.asString.orEmpty()
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -966,7 +973,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
             pendingDelete?.let { (kind, id) ->
                 AlertDialog(
                     onDismissRequest = { pendingDelete = null },
-                    title = { Text(when (kind) { "backup" -> "Ștergi backup-ul?"; "schedule" -> "Ștergi programarea?"; else -> "Ștergi baza de date?" }) },
+                    title = { Text(when (kind) { "backup" -> "Ștergi backup-ul?"; "schedule" -> "Ștergi programarea?"; "subuser" -> "Revoci accesul utilizatorului?"; else -> "Ștergi baza de date?" }) },
                     text = { Text("Acțiunea este definitivă și nu poate fi anulată.") },
                     confirmButton = {
                         TextButton(onClick = {
@@ -977,12 +984,14 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                                     when (kind) {
                                         "backup" -> api.deleteBackup(server.identifier, id)
                                         "schedule" -> api.deleteSchedule(server.identifier, id)
+                                        "subuser" -> api.deleteSubuser(server.identifier, id)
                                         else -> api.deleteDatabase(server.identifier, id)
                                     }
                                 }.onSuccess {
                                     message = when (kind) {
                                         "backup" -> "Backup șters."
                                         "schedule" -> "Programarea a fost ștearsă."
+                                        "subuser" -> "Accesul utilizatorului a fost revocat."
                                         else -> "Baza de date a fost ștearsă."
                                     }
                                     refresh(clearMessage = false)
