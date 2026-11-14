@@ -1,0 +1,41 @@
+name: Idee sau funcție nouă
+description: Propune o îmbunătățire pentru aplicație / Suggest an improvement
+title: "[Idee] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Spune-ne ce ți-ar fi util. Nu include date de cont, parole sau chei API.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Ce ai vrea să poți face?
+      description: Explică nevoia sau problema pe care o întâmpini.
+      placeholder: Mi-ar fi util să pot...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Cum ar funcționa îmbunătățirea?
+      description: Poți descrie un exemplu de utilizare.
+    validations:
+      required: false
+  - type: dropdown
+    id: importance
+    attributes:
+      label: Cât de importantă este pentru tine?
+      options:
+        - Foarte importantă
+        - Utilă
+        - Doar o idee
+    validations:
+      required: true
+  - type: input
+    id: context
+    attributes:
+      label: Telefon și versiune aplicație (opțional)
+      placeholder: De exemplu, Android 15 / ultima versiune IP-NET Hosting
+    validations:
+      required: false
