@@ -856,8 +856,22 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                         Text(detail, color = Muted, fontSize = 10.sp)
                         if (section == "SCHEDULES") {
                             val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
-                            TextButton(onClick = { pendingDelete = "schedule" to id }, enabled = id.isNotBlank()) {
-                                Text("ȘTERGE PROGRAMAREA", color = Red, fontSize = 10.sp)
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                TextButton(
+                                    onClick = {
+                                        scope.launch {
+                                            loading = true
+                                            runCatching { api.executeSchedule(server.identifier, id) }
+                                                .onSuccess { message = "Execuția programării a fost solicitată."; refresh() }
+                                                .onFailure { message = it.message ?: "Executarea programării a eșuat." }
+                                            loading = false
+                                        }
+                                    },
+                                    enabled = id.isNotBlank() && !loading
+                                ) { Text("EXECUTĂ ACUM", color = Color(0xFF55D68B), fontSize = 10.sp) }
+                                TextButton(onClick = { pendingDelete = "schedule" to id }, enabled = id.isNotBlank()) {
+                                    Text("ȘTERGE", color = Red, fontSize = 10.sp)
+                                }
                             }
                         }
                         if (section == "BACKUP-URI") {
