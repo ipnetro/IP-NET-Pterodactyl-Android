@@ -156,11 +156,11 @@ private fun IpNetApp() {
             )
             Surface(Modifier.fillMaxSize(), color = Color.Transparent) {
             Column(Modifier.fillMaxSize()) {
-                Row(Modifier.fillMaxWidth().background(Color(0xFF07090D)).padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().background(Red).padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Image(painter = painterResource(id = R.drawable.ipnet_logo), contentDescription = "IP-NET Hosting", contentScale = ContentScale.Fit, modifier = Modifier.size(58.dp))
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("IP-NET", color = Red, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text("IP-NET", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Text("HOSTING", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
                     }
                     if (connected) TextButton(onClick = { menuOpen = !menuOpen }) { Text(if (menuOpen) "✕" else "☰", color = Color.White, fontSize = 28.sp) }
