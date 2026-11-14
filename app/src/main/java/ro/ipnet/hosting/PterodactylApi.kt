@@ -333,6 +333,11 @@ class PterodactylApi(private val apiKey: String) {
         request(serverPath(identifier, "schedules/$scheduleId/execute"), "POST", "{}")
     }
 
+    suspend fun setScheduleActive(identifier: String, scheduleId: String, active: Boolean) {
+        val body = JsonObject().apply { addProperty("is_active", active) }
+        request(serverPath(identifier, "schedules/$scheduleId"), "POST", body.toString())
+    }
+
     suspend fun deleteSchedule(identifier: String, scheduleId: String) {
         request(serverPath(identifier, "schedules/$scheduleId"), "DELETE")
     }
