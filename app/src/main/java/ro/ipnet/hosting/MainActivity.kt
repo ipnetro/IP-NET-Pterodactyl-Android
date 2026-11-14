@@ -76,6 +76,7 @@ private fun IpNetApp() {
     var folderDialog by remember { mutableStateOf(false) }
     var folderName by remember { mutableStateOf("") }
     var fileActionTarget by remember { mutableStateOf<ServerFile?>(null) }
+    var confirmFileDelete by remember { mutableStateOf(false) }
     var renameValue by remember { mutableStateOf("") }
     var consoleCommand by remember { mutableStateOf("") }
     val consoleLines = remember { mutableStateListOf<String>() }
@@ -96,6 +97,7 @@ private fun IpNetApp() {
         managementServer = null
         editorFile = null
         fileActionTarget = null
+        confirmFileDelete = false
         folderDialog = false
         consoleCommand = ""
         consoleLines.clear()
@@ -397,16 +399,9 @@ private fun IpNetApp() {
                                             }
                                         }) { Text("ARHIVEAZĂ", color = Color(0xFF55D68B), fontSize = 10.sp) }
                                     }
-                                    TextButton(onClick = {
-                                        val selected = filesServer
-                                        val client = api
-                                        if (selected != null && client != null) scope.launch {
-                                            runCatching { client.deleteFiles(selected.identifier, fileDirectory, listOf(target.name)) }
-                                                .onSuccess { serverFiles = client.listFiles(selected.identifier, fileDirectory); filesError = "Element șters." }
-                                                .onFailure { filesError = it.message ?: "Ștergerea a eșuat." }
-                                            fileActionTarget = null
-                                        }
-                                    }) { Text("ȘTERGE", color = Color(0xFFFF687D)) }
+                                    TextButton(onClick = { confirmFileDelete = true }) {
+                                        Text("ȘTERGE", color = Color(0xFFFF687D))
+                                    }
                                 }
                             },
                             dismissButton = { TextButton(onClick = { fileActionTarget = null }) { Text("ANULEAZĂ") } },
@@ -415,6 +410,40 @@ private fun IpNetApp() {
                             textContentColor = Color.White
                         )
                     }
+                    if (confirmFileDelete && fileActionTarget != null && filesServer != null) {
+                        val target = fileActionTarget!!
+                        AlertDialog(
+                            onDismissRequest = { confirmFileDelete = false },
+                            title = { Text("Confirmă ștergerea") },
+                            text = { Text("Ștergi definitiv ${target.name}? Această acțiune nu poate fi anulată.") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    val selected = filesServer
+                                    val client = api
+                                    if (selected != null && client != null) scope.launch {
+                                        runCatching {
+                                            client.deleteFiles(selected.identifier, fileDirectory, listOf(target.name))
+                                            client.listFiles(selected.identifier, fileDirectory)
+                                        }.onSuccess {
+                                            serverFiles = it
+                                            filesError = "Element șters."
+                                        }.onFailure {
+                                            filesError = it.message ?: "Ștergerea a eșuat."
+                                        }
+                                        confirmFileDelete = false
+                                        fileActionTarget = null
+                                    }
+                                }) { Text("ȘTERGE DEFINITIV", color = Color(0xFFFF687D)) }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { confirmFileDelete = false }) { Text("ANULEAZĂ") }
+                            },
+                            containerColor = Panel,
+                            titleContentColor = Color.White,
+                            textContentColor = Color.White
+                        )
+                    }
+
                     if (folderDialog && filesServer != null) {
                         AlertDialog(
                             onDismissRequest = { folderDialog = false },
