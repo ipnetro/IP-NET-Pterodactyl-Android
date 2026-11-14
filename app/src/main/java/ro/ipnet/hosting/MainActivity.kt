@@ -85,15 +85,15 @@ private val roToEnglish = mapOf(
     "TRIMITE" to "SEND",
     "Alege serverul" to "Choose server",
     "Selectează serverul pentru \${serverPickerAction}." to "Select the server for \${serverPickerAction}.",
-    "My Servers" to "Serverele mele",
+    "Serverele mele" to "My Servers",
     "Menu" to "Meniu",
-    "Log Out" to "Ieșire",
-    "MY SERVERS" to "SERVERELE MELE",
+    "Ieșire" to "Log Out",
+    "Serverele mele" to "MY SERVERS",
     "INFO" to "INFO",
-    "CONSOLE" to "CONSOLĂ",
-    "FILES" to "FIȘIERE",
-    "MANAGE" to "GESTIONEAZĂ",
-    "CONTROL SERVER" to "SERVER CONTROLS",
+    "Consolă" to "CONSOLE",
+    "Fișiere" to "FILES",
+    "Gestionează" to "MANAGE",
+    "Control server" to "CONTROL SERVER",
     "ACTUALIZEAZĂ" to "UPDATE",
     "Nume backup (opțional)" to "Backup name (optional)",
     "CREEAZĂ BACKUP" to "CREATE BACKUP",
@@ -109,9 +109,13 @@ private val roToEnglish = mapOf(
     "REVOACĂ ACCESUL" to "REVOKE ACCESS",
     "ROTEȘTE PAROLA" to "ROTATE PASSWORD",
     "ȘTERGE BAZA" to "DELETE DATABASE",
-    "SERVER INFORMATION" to "SERVER INFORMATION",
-    "LIVE RESOURCE USAGE" to "LIVE RESOURCE USAGE",
+    "Informații server" to "SERVER INFORMATION",
+    "Utilizare live resurse" to "LIVE RESOURCE USAGE",
     "Actualizare automată la 5 secunde" to "Automatic refresh every 5 seconds.",
+    "Cron: minută oră zi-lună lună zi-săptămână" to "Cron: minute hour day-of-month month day-of-week",
+    "Exemplu: */5 * * * * (la fiecare 5 minute)" to "Example: */5 * * * * (every 5 minutes)",
+    "Exemplu: say Serverul este online" to "Example: say The server is online",
+    "Consolă • " to "Console • ",
     "Reconectarea la panou a eșuat." to "Reconnecting to the panel failed.",
     "Nu pot încărca fișierele." to "Unable to load files.",
     "Eroare: \${e.message ?: \"conectare eșuată\"}" to "Error: \${e.message ?: \"connection failed\"}",
@@ -149,7 +153,24 @@ private val roToEnglish = mapOf(
     "Actualizare automată la 5 secunde" to "Automatic refresh every 5 seconds."
 )
 private val englishToRo = roToEnglish.entries.associate { it.value to it.key }
-private fun localized(text: String): String = if (appEnglish.value) roToEnglish[text] ?: text else englishToRo[text] ?: text
+private fun localized(text: String): String {
+    if (appEnglish.value) {
+        roToEnglish[text]?.let { return it }
+        Regex("^(\\\\d+) server\\\\(e\\\\) disponibile$").matchEntire(text)?.let { return "${it.groupValues[1]} server(s) available" }
+        if (text.startsWith("Consolă • ")) return "Console • " + text.removePrefix("Consolă • ")
+        if (text.startsWith("Ștergi definitiv ") && text.endsWith("? Această acțiune nu poate fi anulată.")) {
+            return "Permanently delete " + text.removePrefix("Ștergi definitiv ").removeSuffix("? Această acțiune nu poate fi anulată.") + "? This action cannot be undone."
+        }
+        return text
+    }
+    englishToRo[text]?.let { return it }
+    Regex("^(\\\\d+) server\\\\(s\\\\) available$").matchEntire(text)?.let { return "${it.groupValues[1]} server(e) disponibile" }
+    if (text.startsWith("Console • ")) return "Consolă • " + text.removePrefix("Console • ")
+    if (text.startsWith("Permanently delete ") && text.endsWith("? This action cannot be undone.")) {
+        return "Ștergi definitiv " + text.removePrefix("Permanently delete ").removeSuffix("? This action cannot be undone.") + "? Această acțiune nu poate fi anulată."
+    }
+    return text
+}
 
 @Composable
 private fun Text(
