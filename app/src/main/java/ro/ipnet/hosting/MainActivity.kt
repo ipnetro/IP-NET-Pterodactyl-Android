@@ -708,6 +708,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
     var databaseName by remember { mutableStateOf("") }
     var scheduleName by remember { mutableStateOf("") }
     var scheduleCron by remember { mutableStateOf("*/5 * * * *") }
+    var scheduleCommand by remember { mutableStateOf("") }
     var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -796,15 +797,19 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
                     label = { Text("Cron: minută oră zi-lună lună zi-săptămână") },
                     supportingText = { Text("Exemplu: */5 * * * * (la fiecare 5 minute)") })
+                OutlinedTextField(value = scheduleCommand, onValueChange = { scheduleCommand = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    label = { Text("Comanda care va fi executată") },
+                    supportingText = { Text("Exemplu: say Serverul este online") })
                 Button(onClick = {
                     scope.launch {
                         loading = true
-                        runCatching { api.createSchedule(server.identifier, scheduleName.trim(), scheduleCron) }
-                            .onSuccess { message = "Programarea a fost creată."; scheduleName = ""; refresh() }
+                        runCatching { api.createSchedule(server.identifier, scheduleName.trim(), scheduleCron, scheduleCommand) }
+                            .onSuccess { message = "Programarea și comanda au fost create."; scheduleName = ""; scheduleCommand = ""; refresh() }
                             .onFailure { message = it.message ?: "Crearea programării a eșuat." }
                         loading = false
                     }
-                }, enabled = !loading && scheduleName.isNotBlank() && scheduleCron.trim().split(Regex("\\s+")).size == 5,
+                }, enabled = !loading && scheduleName.isNotBlank() && scheduleCommand.isNotBlank() && scheduleCron.trim().split(Regex("\\s+")).size == 5,
                     modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Red)
                 ) { Text("CREEAZĂ PROGRAMARE") }
             }
