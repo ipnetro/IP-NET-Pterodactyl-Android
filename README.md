@@ -1,5 +1,88 @@
 # IP-NET Hosting
 
+## 🇬🇧
+
+
+**Manage your Pterodactyl servers directly from Android.**
+
+IP-NET Hosting is a native Android app built with Kotlin and Jetpack Compose for managing servers in the IP-NET panel.
+
+### App details
+
+| Field | Value |
+|---|---|
+| Name | **IP-NET Hosting** |
+| Application ID | `ro.ipnet.hosting` |
+| Panel | [ptero.ip-net.ro](https://ptero.ip-net.ro) |
+| Minimum Android | 8.0 (API 26) |
+| Published version | 1.0.1 |
+
+### Features
+
+**Server management**
+- View the servers associated with your account.
+- Monitor CPU, memory, and storage usage.
+- Start, stop, and restart servers.
+- View server details and resource history charts.
+
+**Console and files**
+- Use the live WebSocket console and send commands.
+- Browse files and directories.
+- Create directories, edit files, and save changes.
+- Rename, delete, archive, and extract files.
+- Download files.
+
+**Additional tools**
+- Create and manage backups.
+- Manage databases within your account permissions.
+- Create and manage scheduled tasks.
+- View users and revoke subuser access.
+- View network allocations.
+
+### Secure connection
+
+1. Open the Pterodactyl panel and sign in.
+2. Create a **Client API** key in your account settings.
+3. Enter the key in the IP-NET Hosting app.
+
+Use a **Client API** key, not an **Application API** key. After a successful connection, the app stores the key encrypted in the phone's private storage using Android Keystore and attempts to reconnect automatically when reopened. Tap **LOG OUT** to clear the saved key. The app sends the key to the IP-NET panel over HTTPS. Do not publish the key or include it in an issue or screenshot.
+
+Read the [privacy notice](PRIVACY.md) and [security instructions](SECURITY.md).
+
+### Download
+
+Download the official APK from [GitHub Releases](https://github.com/ipnetro/IP-NET-Pterodactyl-Android/releases). The current published version is **1.0.1**.
+
+Version 1.0.1 is signed as a Release build. The app stores the Client API key encrypted on the phone and reconnects when reopened. Later updates signed with the same key can be installed over the existing app without uninstalling it.
+
+### Build and release
+
+The project uses JDK 17, Android SDK 35, and Gradle 8.9.
+
+Build the Debug version locally:
+
+```bash
+gradle :app:assembleDebug
+```
+
+GitHub Actions builds the source when project changes are made and provides a Debug APK as a temporary artifact. A signed Release APK is published using a Git tag in the form `vMAJOR.MINOR.PATCH`. Before the first Release tag, configure the permanent signing key by following the [signing instructions](RELEASE_SIGNING.md). Do not upload the keystore or passwords to the repository.
+
+### License
+
+The app and its code are proprietary. Read [LICENSE](LICENSE). Third-party components remain under their respective licenses.
+
+### Feedback and ideas
+
+Have an idea or found a problem? Open a [new issue](https://github.com/ipnetro/IP-NET-Pterodactyl-Android/issues/new) and choose the appropriate form. Read the [feedback and contribution guide](.github/CONTRIBUTING.md). Please do not post passwords, API keys, or private information.
+
+---
+
+**IP-NET Hosting**  
+Simple management. Fast control. The IP-NET experience.
+
+
+---
+
 ## 🇷🇴
 
 **Administrarea serverelor Pterodactyl, direct de pe Android.**
@@ -78,84 +161,3 @@ Ai o sugestie sau ai găsit o problemă? Deschide un [issue nou](https://github.
 
 **IP-NET Hosting**  
 Administrare simplă. Control rapid. Identitate IP-NET.
-
----
-
-## 🇬🇧
-
-**Manage your Pterodactyl servers directly from Android.**
-
-IP-NET Hosting is a native Android app built with Kotlin and Jetpack Compose for managing servers in the IP-NET panel.
-
-### App details
-
-| Field | Value |
-|---|---|
-| Name | **IP-NET Hosting** |
-| Application ID | `ro.ipnet.hosting` |
-| Panel | [ptero.ip-net.ro](https://ptero.ip-net.ro) |
-| Minimum Android | 8.0 (API 26) |
-| Published version | 1.0.1 |
-
-### Features
-
-**Server management**
-- View the servers associated with your account.
-- Monitor CPU, memory, and storage usage.
-- Start, stop, and restart servers.
-- View server details and resource history charts.
-
-**Console and files**
-- Use the live WebSocket console and send commands.
-- Browse files and directories.
-- Create directories, edit files, and save changes.
-- Rename, delete, archive, and extract files.
-- Download files.
-
-**Additional tools**
-- Create and manage backups.
-- Manage databases within your account permissions.
-- Create and manage scheduled tasks.
-- View users and revoke subuser access.
-- View network allocations.
-
-### Secure connection
-
-1. Open the Pterodactyl panel and sign in.
-2. Create a **Client API** key in your account settings.
-3. Enter the key in the IP-NET Hosting app.
-
-Use a **Client API** key, not an **Application API** key. After a successful connection, the app stores the key encrypted in the phone's private storage using Android Keystore and attempts to reconnect automatically when reopened. Tap **LOG OUT** to clear the saved key. The app sends the key to the IP-NET panel over HTTPS. Do not publish the key or include it in an issue or screenshot.
-
-Read the [privacy notice](PRIVACY.md) and [security instructions](SECURITY.md).
-
-### Download
-
-Download the official APK from [GitHub Releases](https://github.com/ipnetro/IP-NET-Pterodactyl-Android/releases). The current published version is **1.0.1**.
-
-Version 1.0.1 is signed as a Release build. The app stores the Client API key encrypted on the phone and reconnects when reopened. Later updates signed with the same key can be installed over the existing app without uninstalling it.
-
-### Build and release
-
-The project uses JDK 17, Android SDK 35, and Gradle 8.9.
-
-Build the Debug version locally:
-
-```bash
-gradle :app:assembleDebug
-```
-
-GitHub Actions builds the source when project changes are made and provides a Debug APK as a temporary artifact. A signed Release APK is published using a Git tag in the form `vMAJOR.MINOR.PATCH`. Before the first Release tag, configure the permanent signing key by following the [signing instructions](RELEASE_SIGNING.md). Do not upload the keystore or passwords to the repository.
-
-### License
-
-The app and its code are proprietary. Read [LICENSE](LICENSE). Third-party components remain under their respective licenses.
-
-### Feedback and ideas
-
-Have an idea or found a problem? Open a [new issue](https://github.com/ipnetro/IP-NET-Pterodactyl-Android/issues/new) and choose the appropriate form. Read the [feedback and contribution guide](.github/CONTRIBUTING.md). Please do not post passwords, API keys, or private information.
-
----
-
-**IP-NET Hosting**  
-Simple management. Fast control. The IP-NET experience.
