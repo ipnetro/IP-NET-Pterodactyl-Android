@@ -17,7 +17,7 @@ Aplicație Android nativă pentru administrarea serverelor din panoul Pterodacty
 - Consolă live prin WebSocket și trimiterea comenzilor.
 - Informații despre server și istoric grafic al resurselor.
 - Manager de fișiere: navigare, creare dosare, editare/salvare, redenumire, ștergere, arhivare/dezarhivare și descărcare.
-- Administrare backup-uri și baze de date, inclusiv afișarea parolei generate la creare sau rotire când permisiunile Client API permit; creare programări cu comandă executată automat, activare/dezactivare, executare imediată și ștergere programări; vizualizare utilizatori și alocări de rețea.
+- Administrare backup-uri și baze de date (creare, ștergere, rotire și afișarea parolei când permisiunile permit); creare programări cu comandă executată automat, activare/dezactivare, executare imediată și ștergere; vizualizare utilizatori și revocarea accesului subutilizatorilor; vizualizare alocări de rețea.
 
 ## Cheia API
 
