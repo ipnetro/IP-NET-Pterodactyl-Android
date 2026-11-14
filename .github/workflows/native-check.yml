@@ -1,9 +1,9 @@
-name: IP-NET Hosting validation and final APK release
-# Final APK build requested after source validation.
+name: IP-NET Hosting CI and APK release
 
 on:
   push:
-    branches: [ ipnet-hosting ]
+    branches: [ipnet-hosting]
+    tags: ['v*']
     paths:
       - 'settings.gradle.kts'
       - 'build.gradle.kts'
@@ -16,11 +16,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: native-check-${{ github.ref }}
+  group: android-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  compile-source-only:
+  validate:
+    name: Compile Android source
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,68 +37,129 @@ jobs:
           cmdline-tools-version: '12266719'
           accept-android-sdk-licenses: true
           packages: 'platform-tools platforms;android-35'
-      - name: Compile Kotlin source only (no APK packaging)
+      - name: Compile Kotlin source
         run: gradle :app:compileDebugKotlin --no-daemon
-  build-final-apk:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
+  debug-apk:
+    name: Build debug APK artifact
+    if: github.ref == 'refs/heads/ipnet-hosting' || github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Set up Gradle 8.9
-        uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v3
         with:
           cmdline-tools-version: '12266719'
           accept-android-sdk-licenses: true
           packages: 'platform-tools platforms;android-35'
-
-      - name: Build installable APK
+      - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon
-
-      - name: Verify APK identity and signature
+      - name: Verify and name APK
         shell: bash
         run: |
-          VERSION="1.0.0"
-          APK="IP-NET-Hosting-${VERSION}.apk"
+          set -euo pipefail
+          APK="IP-NET-Hosting-debug.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "$APK"
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
-          test -n "$APKSIGNER"
-          test -n "$AAPT"
           "$APKSIGNER" verify --verbose "$APK"
           BADGING="$("$AAPT" dump badging "$APK")"
-          grep -F "package: name='ro.ipnet.hosting' versionCode='1' versionName='1.0.0'" <<< "$BADGING"
-          grep -F "application-label:'IP-NET Hosting'" <<< "$BADGING"
-          echo "APK_FILE=$APK" >> "$GITHUB_ENV"
+          grep -F "package: name='ro.ipnet.hosting'" <<< "$BADGING"
           sha256sum "$APK"
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: IP-NET-Hosting-APK
-          path: ${{ env.APK_FILE }}
+          name: IP-NET-Hosting-debug
+          path: IP-NET-Hosting-debug.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 14
 
+  signed-release:
+    name: Build and publish signed Release APK
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '12266719'
+          accept-android-sdk-licenses: true
+          packages: 'platform-tools platforms;android-35'
+      - name: Configure release signing
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64"
+          test -n "$KEYSTORE_PASSWORD"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASSWORD"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/ipnet-hosting-release.jks"
+          test -s "$RUNNER_TEMP/ipnet-hosting-release.jks"
+          {
+            echo "RELEASE_STORE_FILE=$RUNNER_TEMP/ipnet-hosting-release.jks"
+            echo "RELEASE_STORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "RELEASE_KEY_ALIAS=$KEY_ALIAS"
+            echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+      - name: Check tag and set release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ ! "$VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "Use a tag in the form vMAJOR.MINOR.PATCH."
+            exit 1
+          fi
+          VERSION_CODE=$((BASH_REMATCH[1] * 1000000 + BASH_REMATCH[2] * 1000 + BASH_REMATCH[3]))
+          echo "name=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+      - name: Build signed Release APK
+        run: >-
+          gradle :app:assembleRelease --no-daemon
+          -PappVersionName=${{ steps.version.outputs.name }}
+          -PappVersionCode=${{ steps.version.outputs.code }}
+      - name: Verify APK identity and signature
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.name }}
+        run: |
+          set -euo pipefail
+          APK="IP-NET-Hosting-${VERSION}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --verbose "$APK"
+          BADGING="$("$AAPT" dump badging "$APK")"
+          grep -F "package: name='ro.ipnet.hosting'" <<< "$BADGING"
+          grep -F "versionName='$VERSION'" <<< "$BADGING"
+          sha256sum "$APK"
       - name: Publish APK release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ipnet-hosting-v1.0.0
+          tag_name: ${{ github.ref_name }}
           target_commitish: ${{ github.sha }}
-          name: IP-NET Hosting 1.0.0
+          name: IP-NET Hosting ${{ steps.version.outputs.name }}
           generate_release_notes: true
-          files: ${{ env.APK_FILE }}
-
+          files: IP-NET-Hosting-${{ steps.version.outputs.name }}.apk
