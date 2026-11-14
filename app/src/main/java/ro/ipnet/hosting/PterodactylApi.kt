@@ -361,6 +361,10 @@ class PterodactylApi(private val apiKey: String) {
 
     suspend fun subusers(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "users"))
 
+    suspend fun deleteSubuser(identifier: String, userUuid: String) {
+        request(serverPath(identifier, "users/$userUuid"), "DELETE")
+    }
+
     suspend fun allocations(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "network/allocations"))
 
     suspend fun signedFileDownload(identifier: String, file: String): String {
