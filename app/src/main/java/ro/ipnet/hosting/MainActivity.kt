@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -848,7 +849,11 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                     colors = ButtonDefaults.buttonColors(containerColor = Red)
                 ) { Text("ADAUGĂ BAZĂ DE DATE") }
             }
-            message?.let { Text(it, color = if (it.contains("eșuat") || it.contains("Nu pot")) Color(0xFFFF687D) else Color(0xFF55D68B), fontSize = 11.sp, modifier = Modifier.padding(vertical = 6.dp)) }
+            message?.let {
+                SelectionContainer {
+                    Text(it, color = if (it.contains("eșuat") || it.contains("Nu pot")) Color(0xFFFF687D) else Color(0xFF55D68B), fontSize = 11.sp, modifier = Modifier.padding(vertical = 6.dp))
+                }
+            }
             if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(rows.size) { index ->
