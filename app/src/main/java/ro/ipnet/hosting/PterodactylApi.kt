@@ -318,7 +318,7 @@ class PterodactylApi(private val apiKey: String) {
         val task = JsonObject().apply {
             addProperty("action", "command")
             addProperty("payload", command.trim())
-            addProperty("time_in_seconds", 0)
+            addProperty("time_offset", 0)
             addProperty("sequence_id", 1)
         }
         try {
