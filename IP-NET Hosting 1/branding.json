@@ -1,0 +1,13 @@
+{
+  "project_name": "IP-NET Hosting 1",
+  "application_name": "IP-NET Hosting",
+  "application_id": "ro.ipnet.hosting",
+  "base_url": "https://ptero.ip-net.ro",
+  "theme": {
+    "background": "#090A0D",
+    "panel": "#151820",
+    "accent": "#F32643",
+    "muted": "#9AA0AC"
+  },
+  "launcher_icon": "ipnet_hosting_logo.png"
+}
