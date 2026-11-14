@@ -329,6 +329,10 @@ class PterodactylApi(private val apiKey: String) {
         }
     }
 
+    suspend fun executeSchedule(identifier: String, scheduleId: String) {
+        request(serverPath(identifier, "schedules/$scheduleId/execute"), "POST", "{}")
+    }
+
     suspend fun deleteSchedule(identifier: String, scheduleId: String) {
         request(serverPath(identifier, "schedules/$scheduleId"), "DELETE")
     }
