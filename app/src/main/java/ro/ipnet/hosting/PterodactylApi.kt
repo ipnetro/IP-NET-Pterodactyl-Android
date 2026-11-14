@@ -285,13 +285,26 @@ class PterodactylApi(private val apiKey: String) {
 
     suspend fun databases(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "databases"))
 
-    suspend fun createDatabase(identifier: String, name: String, remote: String = "%") {
+    private fun databasePassword(response: String): String? = runCatching {
+        JsonParser.parseString(response).asJsonObject
+            .getAsJsonObject("attributes")
+            ?.getAsJsonObject("relationships")
+            ?.getAsJsonObject("password")
+            ?.getAsJsonObject("attributes")
+            ?.get("password")
+            ?.takeUnless { it.isJsonNull }
+            ?.asString
+    }.getOrNull()
+
+    suspend fun createDatabase(identifier: String, name: String, remote: String = "%"): String? {
         val body = JsonObject().apply { addProperty("database", name); addProperty("remote", remote) }
-        request(serverPath(identifier, "databases"), "POST", body.toString())
+        val response = request(serverPath(identifier, "databases?include=password"), "POST", body.toString())
+        return databasePassword(response)
     }
 
-    suspend fun rotateDatabasePassword(identifier: String, databaseId: String) {
-        request(serverPath(identifier, "databases/$databaseId/rotate-password"), "POST", "{}")
+    suspend fun rotateDatabasePassword(identifier: String, databaseId: String): String? {
+        val response = request(serverPath(identifier, "databases/$databaseId/rotate-password?include=password"), "POST", "{}")
+        return databasePassword(response)
     }
 
     suspend fun schedules(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "schedules"))
