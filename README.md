@@ -1,41 +1,71 @@
 # IP-NET Hosting
 
-Aplicație Android nativă pentru administrarea serverelor din panoul Pterodactyl IP-NET.
+**Administrarea serverelor Pterodactyl, direct de pe Android.**
 
-- Nume aplicație: **IP-NET Hosting**
-- Application ID: `ro.ipnet.hosting`
-- Panou: `https://ptero.ip-net.ro`
-- Interfață: branding IP-NET negru / roșu
-- Min SDK: Android 8.0 (API 26)
+IP-NET Hosting este o aplicație Android nativă, construită cu Kotlin și Jetpack Compose, pentru gestionarea serverelor din panoul IP-NET.
 
-## Funcționalități implementate în cod
+## Identitatea aplicației
 
-- Conectare cu Client API Key Pterodactyl; cheia rămâne în memoria aplicației și nu este salvată pe disc.
-- Listarea serverelor contului, inclusiv paginile următoare ale răspunsului API.
-- Afișarea utilizării CPU, memorie și stocare, cu actualizare periodică.
-- Comenzi de pornire, oprire și restart.
+| Element | Valoare |
+|---|---|
+| Nume | **IP-NET Hosting** |
+| Application ID | `ro.ipnet.hosting` |
+| Panou | [ptero.ip-net.ro](https://ptero.ip-net.ro) |
+| Interfață | Temă IP-NET negru și roșu |
+| Android minim | 8.0 (API 26) |
+
+## Funcționalități
+
+### Administrarea serverelor
+- Listarea serverelor asociate contului.
+- Monitorizarea utilizării CPU, memoriei și spațiului de stocare.
+- Pornirea, oprirea și repornirea serverelor.
+- Informații despre server și grafice cu istoricul resurselor.
+
+### Consolă și fișiere
 - Consolă live prin WebSocket și trimiterea comenzilor.
-- Informații despre server și istoric grafic al resurselor.
-- Manager de fișiere: navigare, creare dosare, editare/salvare, redenumire, ștergere, arhivare/dezarhivare și descărcare.
-- Administrare backup-uri și baze de date (creare, ștergere, rotire și afișarea parolei când permisiunile permit); creare programări cu comandă executată automat, activare/dezactivare, executare imediată și ștergere; vizualizare utilizatori și revocarea accesului subutilizatorilor; vizualizare alocări de rețea.
+- Navigarea prin fișiere și directoare.
+- Crearea directoarelor, editarea și salvarea fișierelor.
+- Redenumirea, ștergerea, arhivarea și dezarhivarea fișierelor.
+- Descărcarea fișierelor.
 
-## Cheia API
+### Instrumente suplimentare
+- Crearea și administrarea backup-urilor.
+- Administrarea bazelor de date, în limitele permisiunilor contului.
+- Crearea și gestionarea programărilor automate.
+- Vizualizarea utilizatorilor și revocarea accesului subutilizatorilor.
+- Vizualizarea alocărilor de rețea.
 
-În panoul Pterodactyl, creează o cheie **Client API** din contul utilizatorului. Nu folosi o cheie Application API. Nu publica cheia în GitHub sau în conversații.
+## Conectare securizată
 
-## Validare
+1. Deschide panoul Pterodactyl și intră în contul tău.
+2. Creează o cheie **Client API** din setările contului.
+3. Introdu cheia în aplicația IP-NET Hosting.
 
-Workflow-ul `.github/workflows/native-check.yml` verifică compilarea sursei Kotlin și nu generează APK. APK-ul va fi construit separat, după finalizarea și verificarea aplicației.
+Folosește cheia **Client API**, nu cheia **Application API**. Nu publica cheia și nu o transmite altor persoane. În implementarea actuală, cheia este păstrată în memoria aplicației și nu este salvată pe disc.
 
-## APK de instalare
+## Verificare și compilare
 
-Versiunea 1.0.0 este publicată ca APK instalabil în secțiunea GitHub Releases.
+Proiectul include un workflow GitHub Actions pentru verificarea compilării sursei Kotlin.
 
-## Build local
+Pentru compilare locală sunt necesare:
+- JDK 17
+- Android SDK 35
+- Gradle 8.9
 
-Necesită JDK 17, Android SDK 35 și Gradle 8.9:
+Comanda pentru generarea variantei Debug:
+
 ```bash
 gradle :app:assembleDebug
 ```
 
-Aplicația este implementată nativ în Kotlin și Jetpack Compose și folosește API-ul Pterodactyl.
+Workflow-ul de verificare a sursei nu generează automat APK-ul.
+
+## APK
+
+Versiunea **1.0.0** este disponibilă în secțiunea [Releases](https://github.com/ipnetro/IP-NET-Pterodactyl-Android/releases).
+
+---
+
+**IP-NET Hosting**  
+Administrare simplă. Control rapid. Identitate IP-NET.
