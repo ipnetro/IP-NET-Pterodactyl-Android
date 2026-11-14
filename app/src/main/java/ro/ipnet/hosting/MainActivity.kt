@@ -595,8 +595,8 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
     val liveState = stats?.state ?: server.status
     val running = liveState.equals("running", ignoreCase = true)
     val canStart = liveState.equals("offline", ignoreCase = true)
-    val memoryUsed = stats?.memoryBytes?.div(1024L * 1024L) ?: 0L
-    val diskUsed = stats?.diskBytes?.div(1024L * 1024L) ?: 0L
+    val memoryUsed = stats?.memoryBytes?.div(1024L * 1024L)
+    val diskUsed = stats?.diskBytes?.div(1024L * 1024L)
     Column(Modifier.fillMaxWidth().background(Color(0xFF121B26), RoundedCornerShape(10.dp)).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -622,7 +622,7 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
         }
         Spacer(Modifier.height(16.dp))
         Text(
-            "CPU  ${"%.1f".format(stats?.cpuPercent ?: 0.0)}% / ${if (server.cpu > 0) "${server.cpu}%" else "NELIMITAT"}",
+            "CPU  ${stats?.let { "%.1f".format(it.cpuPercent) + "%" } ?: "—"} / ${if (server.cpu > 0) "${server.cpu}%" else "NELIMITAT"}",
             color = Color.White, fontSize = 12.sp
         )
         if (server.cpu > 0) {
@@ -634,24 +634,24 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
         }
         Spacer(Modifier.height(9.dp))
         Text(
-            "MEMORY  $memoryUsed MB / ${if (server.memory > 0) "${server.memory} MB" else "NELIMITAT"}",
+            "MEMORY  ${memoryUsed?.let { "$it MB" } ?: "—"} / ${if (server.memory > 0) "${server.memory} MB" else "NELIMITAT"}",
             color = Color.White, fontSize = 12.sp
         )
         if (server.memory > 0) {
             LinearProgressIndicator(
-                progress = { (memoryUsed.toFloat() / server.memory).coerceIn(0f, 1f) },
+                progress = { ((memoryUsed ?: 0L).toFloat() / server.memory).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(7.dp),
                 color = Color(0xFF24C777), trackColor = Color(0xFF263241)
             )
         }
         Spacer(Modifier.height(9.dp))
         Text(
-            "STORAGE  $diskUsed MB / ${if (server.disk > 0) "${server.disk} MB" else "NELIMITAT"}",
+            "STORAGE  ${diskUsed?.let { "$it MB" } ?: "—"} / ${if (server.disk > 0) "${server.disk} MB" else "NELIMITAT"}",
             color = Color.White, fontSize = 12.sp
         )
         if (server.disk > 0) {
             LinearProgressIndicator(
-                progress = { (diskUsed.toFloat() / server.disk).coerceIn(0f, 1f) },
+                progress = { ((diskUsed ?: 0L).toFloat() / server.disk).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(7.dp),
                 color = Color(0xFF22B7E9), trackColor = Color(0xFF263241)
             )
@@ -679,6 +679,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
     var databaseName by remember { mutableStateOf("") }
     var scheduleName by remember { mutableStateOf("") }
     var scheduleCron by remember { mutableStateOf("*/5 * * * *") }
+    var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -817,13 +818,9 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                         Text(detail, color = Muted, fontSize = 10.sp)
                         if (section == "SCHEDULES") {
                             val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
-                            TextButton(onClick = {
-                                scope.launch {
-                                    runCatching { api.deleteSchedule(server.identifier, id) }
-                                        .onSuccess { message = "Programarea a fost ștearsă."; refresh() }
-                                        .onFailure { message = it.message ?: "Ștergerea programării a eșuat." }
-                                }
-                            }, enabled = id.isNotBlank()) { Text("ȘTERGE PROGRAMAREA", color = Red, fontSize = 10.sp) }
+                            TextButton(onClick = { pendingDelete = "schedule" to id }, enabled = id.isNotBlank()) {
+                                Text("ȘTERGE PROGRAMAREA", color = Red, fontSize = 10.sp)
+                            }
                         }
                         if (section == "BACKUP-URI") {
                             val id = row.get("uuid")?.asString.orEmpty()
@@ -848,13 +845,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                                     enabled = id.isNotBlank()
                                 ) { Text("DESCARCĂ", color = Color(0xFF55D68B), fontSize = 10.sp) }
                                 TextButton(
-                                    onClick = {
-                                        scope.launch {
-                                            runCatching { api.deleteBackup(server.identifier, id) }
-                                                .onSuccess { message = "Backup șters."; refresh() }
-                                                .onFailure { message = it.message ?: "Ștergerea a eșuat." }
-                                        }
-                                    },
+                                    onClick = { pendingDelete = "backup" to id },
                                     enabled = id.isNotBlank()
                                 ) { Text("ȘTERGE BACKUP", color = Red, fontSize = 10.sp) }
                             }
@@ -880,6 +871,37 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
             }
             TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
                 Text("ÎNCHIDE", color = Red)
+            }
+            pendingDelete?.let { (kind, id) ->
+                AlertDialog(
+                    onDismissRequest = { pendingDelete = null },
+                    title = { Text(if (kind == "backup") "Ștergi backup-ul?" else "Ștergi programarea?") },
+                    text = { Text("Acțiunea este definitivă și nu poate fi anulată.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            pendingDelete = null
+                            scope.launch {
+                                loading = true
+                                runCatching {
+                                    if (kind == "backup") api.deleteBackup(server.identifier, id)
+                                    else api.deleteSchedule(server.identifier, id)
+                                }.onSuccess {
+                                    message = if (kind == "backup") "Backup șters." else "Programarea a fost ștearsă."
+                                    refresh()
+                                }.onFailure {
+                                    message = it.message ?: "Ștergerea a eșuat."
+                                }
+                                loading = false
+                            }
+                        }) { Text("ȘTERGE", color = Red) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingDelete = null }) { Text("ANULEAZĂ") }
+                    },
+                    containerColor = Panel,
+                    titleContentColor = Color.White,
+                    textContentColor = Color.White
+                )
             }
         }
     }
