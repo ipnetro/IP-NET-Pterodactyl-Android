@@ -12,7 +12,7 @@ IP-NET Hosting este o aplicație Android nativă, construită cu Kotlin și Jetp
 | Application ID | `ro.ipnet.hosting` |
 | Panou | [ptero.ip-net.ro](https://ptero.ip-net.ro) |
 | Android minim | 8.0 (API 26) |
-| Versiune publicată | 1.0.0 |
+| Versiune publicată | 1.0.1 |
 
 ## Funcționalități
 
@@ -45,15 +45,15 @@ IP-NET Hosting este o aplicație Android nativă, construită cu Kotlin și Jetp
 2. Creează o cheie **Client API** din setările contului.
 3. Introdu cheia în aplicația IP-NET Hosting.
 
-Folosește cheia **Client API**, nu cheia **Application API**. Cheia este folosită numai în memoria sesiunii curente și nu este salvată de aplicație. Aplicația o transmite prin HTTPS către panoul IP-NET. Nu publica cheia și nu o include într-un issue sau într-o captură de ecran.
+Folosește cheia **Client API**, nu cheia **Application API**. După conectarea reușită, aplicația păstrează cheia criptată în spațiul privat al telefonului, cu Android Keystore, și încearcă reconectarea automat la redeschidere. Apasă **IEȘIRE** pentru a șterge cheia salvată. Aplicația transmite cheia prin HTTPS către panoul IP-NET. Nu publica cheia și nu o include într-un issue sau într-o captură de ecran.
 
 Consultă [nota de confidențialitate](PRIVACY.md) și [instrucțiunile de securitate](SECURITY.md).
 
 ## Descărcare
 
-Descarcă APK-ul oficial din [GitHub Releases](https://github.com/ipnetro/IP-NET-Pterodactyl-Android/releases). Versiunea publicată în prezent este **1.0.0**.
+Descarcă APK-ul oficial din [GitHub Releases](https://github.com/ipnetro/IP-NET-Pterodactyl-Android/releases). Versiunea publicată în prezent este **1.0.1**.
 
-APK-ul 1.0.0 a fost construit ca variantă Debug. Actualizările viitoare vor fi publicate cu o cheie Release stabilă. La instalarea primei versiuni semnate Release peste APK-ul Debug poate fi necesară dezinstalarea versiunii existente. Dezinstalarea elimină datele aplicației de pe telefon.
+Versiunea 1.0.1 este semnată Release. Aplicația păstrează cheia Client API criptată pe telefon și se reconectează la redeschidere. Actualizările publicate ulterior cu aceeași semnătură se instalează peste aplicație, fără dezinstalare.
 
 ## Compilare și publicare
 
