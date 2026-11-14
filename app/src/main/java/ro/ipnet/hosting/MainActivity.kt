@@ -544,7 +544,7 @@ private fun IpNetApp() {
                     Row(Modifier.fillMaxWidth().background(Color(0xFF10151D)).padding(vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = { menuOpen = false }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("▤", color = Red, fontSize = 22.sp); Text("My Servers", color = Color.White, fontSize = 11.sp) } }
-                        TextButton(onClick = { menuOpen = true }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("♙", color = Muted, fontSize = 22.sp); Text("Account", color = Color.White, fontSize = 11.sp) } }
+                        TextButton(onClick = { menuOpen = true }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("♙", color = Muted, fontSize = 22.sp); Text("Menu", color = Color.White, fontSize = 11.sp) } }
                         TextButton(onClick = { logout() }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("⇥", color = Muted, fontSize = 22.sp); Text("Log Out", color = Color.White, fontSize = 11.sp) } }
                     }
                 }
