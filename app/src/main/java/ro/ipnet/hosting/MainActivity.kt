@@ -856,7 +856,20 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                         Text(detail, color = Muted, fontSize = 10.sp)
                         if (section == "SCHEDULES") {
                             val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            val isActive = row.get("is_active")?.takeUnless { it.isJsonNull }?.asBoolean ?: false
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                TextButton(
+                                    onClick = {
+                                        scope.launch {
+                                            loading = true
+                                            runCatching { api.setScheduleActive(server.identifier, id, !isActive) }
+                                                .onSuccess { message = if (isActive) "Programarea a fost dezactivată." else "Programarea a fost activată."; refresh() }
+                                                .onFailure { message = it.message ?: "Actualizarea programării a eșuat." }
+                                            loading = false
+                                        }
+                                    },
+                                    enabled = id.isNotBlank() && !loading
+                                ) { Text(if (isActive) "PAUZĂ" else "ACTIVEAZĂ", color = if (isActive) Color(0xFFFFBD16) else Color(0xFF55D68B), fontSize = 10.sp) }
                                 TextButton(
                                     onClick = {
                                         scope.launch {
@@ -869,7 +882,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                                     },
                                     enabled = id.isNotBlank() && !loading
                                 ) { Text("EXECUTĂ ACUM", color = Color(0xFF55D68B), fontSize = 10.sp) }
-                                TextButton(onClick = { pendingDelete = "schedule" to id }, enabled = id.isNotBlank()) {
+                                TextButton(onClick = { pendingDelete = "schedule" to id }, enabled = id.isNotBlank() && !loading) {
                                     Text("ȘTERGE", color = Red, fontSize = 10.sp)
                                 }
                             }
