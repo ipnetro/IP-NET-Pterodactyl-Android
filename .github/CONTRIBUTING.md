@@ -26,6 +26,6 @@ Before opening a pull request with code changes, create an issue and discuss the
 
 ## Limba codului și a interfeței / Code and interface languages
 
-Identificatorii din cod (numele funcțiilor și variabilelor) rămân în engleză pentru a fi ușor de folosit de dezvoltatori din alte țări. Poți scrie comentarii explicative, rapoarte și propuneri în română sau engleză. Interfața aplicației poate fi aleasă de utilizator în română sau engleză.
+Identificatorii din cod (numele funcțiilor și variabilelor) rămân în engleză pentru a fi ușor de folosit de dezvoltatori din alte țări. Comentariile și documentația despre funcționalități se scriu în ambele limbi, română și engleză. Issue-urile și propunerile pot fi trimise în oricare dintre aceste limbi. Utilizatorii pot alege româna sau engleza în aplicație.
 
-Code identifiers, such as function and variable names, stay in English so developers from other countries can work with them easily. You may write explanatory comments, reports, and proposals in Romanian or English. App users can choose Romanian or English for the interface.
+Code identifiers, such as function and variable names, stay in English so developers from other countries can work with them easily. Comments and feature documentation should be provided in both Romanian and English. Issues and proposals may be submitted in either language. App users can choose Romanian or English in the app.
