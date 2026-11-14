@@ -202,9 +202,20 @@ private fun IpNetApp() {
                             Text("Serverele mele", fontSize = 21.sp, fontWeight = FontWeight.Bold)
                             Text("${servers.size} server(e) disponibile", color = Muted, fontSize = 12.sp)
                         }
-                        TextButton(onClick = {
-                            logout()
-                        }) { Text("Ieșire", color = Red) }
+                        TextButton(
+                            enabled = !busy,
+                            onClick = {
+                                val client = api
+                                if (client != null) scope.launch {
+                                    busy = true
+                                    error = null
+                                    try { servers = client.servers() }
+                                    catch (e: Exception) { error = e.message ?: "Actualizarea serverelor a eșuat." }
+                                    finally { busy = false }
+                                }
+                            }
+                        ) { Text("REÎNCARCĂ", color = Color.White) }
+                        TextButton(onClick = { logout() }) { Text("IEȘIRE", color = Red) }
                     }
                     Spacer(Modifier.height(12.dp))
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
@@ -462,12 +473,12 @@ private fun IpNetApp() {
                     Dialog(onDismissRequest = { menuOpen = false }) {
                         Column(Modifier.fillMaxWidth().background(Color(0xFF111923), RoundedCornerShape(12.dp)).padding(12.dp)) {
                             Text("IP-NET HOSTING", color = Red, fontWeight = FontWeight.Bold, modifier = Modifier.padding(10.dp))
-                            listOf("DASHBOARD", "MY SERVERS", "CONSOLE", "FILE MANAGER", "SERVER CONFIG", "SETTINGS", "DATABASES", "SCHEDULES", "ACCESS CONTROL", "BACKUPS", "NETWORK", "TOOLS").forEach { item ->
+                            listOf("MY SERVERS", "CONSOLE", "FILE MANAGER", "DATABASES", "SCHEDULES", "ACCESS CONTROL", "BACKUPS", "NETWORK").forEach { item ->
                                 TextButton(onClick = {
                                     menuOpen = false
                                     val selected = servers.firstOrNull()
                                     when (item) {
-                                        "DASHBOARD", "MY SERVERS" -> Unit
+                                        "MY SERVERS" -> Unit
                                         "CONSOLE" -> if (selected != null) consoleServer = selected
                                         "FILE MANAGER" -> if (selected != null) { filesServer = selected; fileDirectory = "/" }
                                         "DATABASES" -> if (selected != null) { managementSection = "BAZE DE DATE"; managementServer = selected }
@@ -475,10 +486,6 @@ private fun IpNetApp() {
                                         "ACCESS CONTROL" -> if (selected != null) { managementSection = "UTILIZATORI"; managementServer = selected }
                                         "BACKUPS" -> if (selected != null) { managementSection = "BACKUP-URI"; managementServer = selected }
                                         "NETWORK" -> if (selected != null) { managementSection = "REȚEA"; managementServer = selected }
-                                        "SERVER CONFIG", "SETTINGS", "TOOLS" -> if (selected != null) {
-                                            managementSection = item
-                                            managementServer = selected
-                                        }
                                     }
                                 }, modifier = Modifier.fillMaxWidth()) { Text(item, color = Color.White, modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.SemiBold) }
                             }
