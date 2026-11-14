@@ -56,6 +56,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun IpNetApp() {
     val context = LocalContext.current
+    val secureApiKeyStore = remember(context) { SecureApiKeyStore(context) }
+    var sessionRestored by remember { mutableStateOf(false) }
     var apiKey by remember { mutableStateOf("") }
     var menuOpen by remember { mutableStateOf(false) }
     var serverPickerAction by remember { mutableStateOf<String?>(null) }
@@ -89,7 +91,30 @@ private fun IpNetApp() {
     var consoleSocket by remember { mutableStateOf<WebSocket?>(null) }
     val latestConsoleSocket by rememberUpdatedState(consoleSocket)
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(secureApiKeyStore) {
+        val savedKey = withContext(Dispatchers.IO) { secureApiKeyStore.load() }
+        apiKey = savedKey.orEmpty()
+        if (!savedKey.isNullOrBlank()) {
+            busy = true
+            try {
+                val candidate = PterodactylApi(savedKey)
+                servers = candidate.servers()
+                api = candidate
+                connected = true
+            } catch (e: Exception) {
+                error = e.message ?: "Reconectarea la panou a eșuat."
+            } finally {
+                busy = false
+                sessionRestored = true
+            }
+        } else {
+            sessionRestored = true
+        }
+    }
+
     val logout = {
+        secureApiKeyStore.clear()
         connected = false
         api = null
         apiKey = ""
@@ -189,14 +214,17 @@ private fun IpNetApp() {
                     )
                     Spacer(Modifier.height(12.dp))
                     Button(
-                        enabled = !busy,
+                        enabled = !busy && sessionRestored,
                         onClick = {
                             if (apiKey.isBlank()) { error = "Introdu cheia Client API din panou."; return@Button }
                             busy = true; error = null
                             scope.launch {
                                 try {
-                                    val candidate = PterodactylApi(apiKey.trim())
+                                    val cleanKey = apiKey.trim()
+                                    val candidate = PterodactylApi(cleanKey)
                                     servers = candidate.servers()
+                                    withContext(Dispatchers.IO) { secureApiKeyStore.save(cleanKey) }
+                                    apiKey = cleanKey
                                     api = candidate
                                     connected = true
                                 } catch (e: Exception) { error = e.message ?: "Conectare eșuată." }
@@ -205,9 +233,9 @@ private fun IpNetApp() {
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = Red)
-                    ) { Text(if (busy) "Se conectează..." else "CONECTARE") }
+                    ) { Text(if (!sessionRestored) "SE RESTAUREAZĂ..." else if (busy) "Se conectează..." else "CONECTARE") }
                     Text(
-                        "Cheia API este folosită doar în memoria aplicației și nu este salvată.",
+                        "Cheia se salvează criptat pe acest telefon și se șterge când apeși IEȘIRE. La redeschidere, aplicația încearcă reconectarea automat.",
                         color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp)
                     )
                 } else {
