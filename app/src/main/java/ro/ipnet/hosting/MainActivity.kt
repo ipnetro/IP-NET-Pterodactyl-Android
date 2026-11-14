@@ -213,7 +213,7 @@ private fun IpNetApp() {
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Serverele mele", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                            Text("Serverele mele", color = Red, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                             Text("${servers.size} server(e) disponibile", color = Muted, fontSize = 12.sp)
                         }
                         TextButton(
