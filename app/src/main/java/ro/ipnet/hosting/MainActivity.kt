@@ -722,10 +722,10 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    fun refresh() {
+    fun refresh(clearMessage: Boolean = true) {
         scope.launch {
             loading = true
-            message = null
+            if (clearMessage) message = null
             try {
                 rows = when (section) {
                     "BACKUP-URI" -> api.backups(server.identifier)
@@ -790,7 +790,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                         scope.launch {
                             loading = true
                             runCatching { api.createBackup(server.identifier, backupName.trim()) }
-                                .onSuccess { message = "Backup-ul a fost solicitat."; backupName = ""; refresh() }
+                                .onSuccess { message = "Backup-ul a fost solicitat."; backupName = ""; refresh(clearMessage = false) }
                                 .onFailure { message = it.message ?: "Crearea backup-ului a eșuat." }
                             loading = false
                         }
@@ -814,7 +814,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                     scope.launch {
                         loading = true
                         runCatching { api.createSchedule(server.identifier, scheduleName.trim(), scheduleCron, scheduleCommand) }
-                            .onSuccess { message = "Programarea și comanda au fost create."; scheduleName = ""; scheduleCommand = ""; refresh() }
+                            .onSuccess { message = "Programarea și comanda au fost create."; scheduleName = ""; scheduleCommand = ""; refresh(clearMessage = false) }
                             .onFailure { message = it.message ?: "Crearea programării a eșuat." }
                         loading = false
                     }
@@ -837,7 +837,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                                     message = password?.let { "Baza de date a fost creată. Parola: $it" }
                                         ?: "Baza de date a fost creată. Panoul nu a returnat parola pentru permisiunile acestui cont."
                                     databaseName = ""
-                                    refresh()
+                                    refresh(clearMessage = false)
                                 }
                                 .onFailure { message = it.message ?: "Crearea bazei de date a eșuat." }
                             loading = false
@@ -873,7 +873,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                                         scope.launch {
                                             loading = true
                                             runCatching { api.setScheduleActive(server.identifier, id, !isActive) }
-                                                .onSuccess { message = if (isActive) "Programarea a fost dezactivată." else "Programarea a fost activată."; refresh() }
+                                                .onSuccess { message = if (isActive) "Programarea a fost dezactivată." else "Programarea a fost activată."; refresh(clearMessage = false) }
                                                 .onFailure { message = it.message ?: "Actualizarea programării a eșuat." }
                                             loading = false
                                         }
@@ -885,7 +885,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                                         scope.launch {
                                             loading = true
                                             runCatching { api.executeSchedule(server.identifier, id) }
-                                                .onSuccess { message = "Execuția programării a fost solicitată."; refresh() }
+                                                .onSuccess { message = "Execuția programării a fost solicitată."; refresh(clearMessage = false) }
                                                 .onFailure { message = it.message ?: "Executarea programării a eșuat." }
                                             loading = false
                                         }
@@ -935,7 +935,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                                             .onSuccess { password ->
                                                 message = password?.let { "Parola nouă a bazei de date: $it" }
                                                     ?: "Parola a fost rotită, dar contul nu are permisiunea de a o vizualiza."
-                                                refresh()
+                                                refresh(clearMessage = false)
                                             }
                                             .onFailure { message = it.message ?: "Rotirea parolei a eșuat." }
                                     }
@@ -967,7 +967,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                                     else api.deleteSchedule(server.identifier, id)
                                 }.onSuccess {
                                     message = if (kind == "backup") "Backup șters." else "Programarea a fost ștearsă."
-                                    refresh()
+                                    refresh(clearMessage = false)
                                 }.onFailure {
                                     message = it.message ?: "Ștergerea a eșuat."
                                 }
