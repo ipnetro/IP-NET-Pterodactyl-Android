@@ -841,7 +841,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                                                     .setAllowedOverMetered(true)
                                                     .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
                                                 context.getSystemService(DownloadManager::class.java).enqueue(download)
-                                                Toast.makeText(context, "Descărcarea backup-ului a început.", Toast.LENGTH_SHORT).show())
+                                                Toast.makeText(context, "Descărcarea backup-ului a început.", Toast.LENGTH_SHORT).show()
                                             }.onFailure { message = it.message ?: "Descărcarea backup-ului a eșuat." }
                                         }
                                     },
