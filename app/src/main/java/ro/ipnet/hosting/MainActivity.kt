@@ -859,7 +859,10 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                 items(rows.size) { index ->
                     val row = rows[index]
                     val label = row.get("name")?.takeUnless { it.isJsonNull }?.asString
+                        ?: row.get("username")?.takeUnless { it.isJsonNull }?.asString
                         ?: row.get("database")?.takeUnless { it.isJsonNull }?.asString
+                        ?: row.get("ip")?.takeUnless { it.isJsonNull }?.asString
+                        ?: row.get("email")?.takeUnless { it.isJsonNull }?.asString
                         ?: row.get("uuid")?.takeUnless { it.isJsonNull }?.asString
                         ?: row.get("id")?.takeUnless { it.isJsonNull }?.asString
                         ?: "Element ${index + 1}"
