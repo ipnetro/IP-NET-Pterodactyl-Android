@@ -365,7 +365,7 @@ private fun IpNetApp() {
                                                         .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                                                         .setAllowedOverMetered(true)
                                                         .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-                                                        .allowScanningByMediaScanner()
+                                                    download.allowScanningByMediaScanner()
                                                     context.getSystemService(DownloadManager::class.java).enqueue(download)
                                                     Toast.makeText(context, "Descărcarea a început: $fileName", Toast.LENGTH_SHORT).show()
                                                 }.onFailure { filesError = it.message ?: "Descărcarea nu a putut fi pornită." }
@@ -912,7 +912,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                                                     .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                                                     .setAllowedOverMetered(true)
                                                     .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-                                                        .allowScanningByMediaScanner()
+                                                download.allowScanningByMediaScanner()
                                                 context.getSystemService(DownloadManager::class.java).enqueue(download)
                                                 Toast.makeText(context, "Descărcarea backup-ului a început.", Toast.LENGTH_SHORT).show()
                                             }.onFailure { message = it.message ?: "Descărcarea backup-ului a eșuat." }
