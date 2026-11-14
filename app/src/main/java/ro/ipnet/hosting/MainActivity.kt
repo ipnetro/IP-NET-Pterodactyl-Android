@@ -833,7 +833,12 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                         scope.launch {
                             loading = true
                             runCatching { api.createDatabase(server.identifier, databaseName.trim()) }
-                                .onSuccess { message = "Cererea de creare a bazei de date a fost trimisă."; databaseName = ""; refresh() }
+                                .onSuccess { password ->
+                                    message = password?.let { "Baza de date a fost creată. Parola: $it" }
+                                        ?: "Baza de date a fost creată. Panoul nu a returnat parola pentru permisiunile acestui cont."
+                                    databaseName = ""
+                                    refresh()
+                                }
                                 .onFailure { message = it.message ?: "Crearea bazei de date a eșuat." }
                             loading = false
                         }
@@ -927,7 +932,11 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                                 onClick = {
                                     scope.launch {
                                         runCatching { api.rotateDatabasePassword(server.identifier, id) }
-                                            .onSuccess { message = "Parola bazei de date a fost rotită. Verifică detaliile în panou."; refresh() }
+                                            .onSuccess { password ->
+                                                message = password?.let { "Parola nouă a bazei de date: $it" }
+                                                    ?: "Parola a fost rotită, dar contul nu are permisiunea de a o vizualiza."
+                                                refresh()
+                                            }
                                             .onFailure { message = it.message ?: "Rotirea parolei a eșuat." }
                                     }
                                 },
