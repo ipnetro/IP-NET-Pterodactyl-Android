@@ -182,6 +182,7 @@ private fun IpNetApp() {
                     )
                     Spacer(Modifier.height(12.dp))
                     Button(
+                        enabled = !busy,
                         onClick = {
                             if (apiKey.isBlank()) { error = "Introdu cheia Client API din panou."; return@Button }
                             busy = true; error = null
@@ -518,7 +519,8 @@ private fun IpNetApp() {
                                             consoleSocket?.send(payload.toString())
                                             consoleCommand = ""
                                         }
-                                    }, colors = ButtonDefaults.buttonColors(containerColor = Red)) { Text("TRIMITE") }
+                                    }, enabled = consoleSocket != null,
+                                        colors = ButtonDefaults.buttonColors(containerColor = Red)) { Text("TRIMITE") }
                                 }
                                 TextButton(onClick = { consoleServer = null }, modifier = Modifier.align(Alignment.End)) { Text("ÎNCHIDE", color = Red) }
                             }
