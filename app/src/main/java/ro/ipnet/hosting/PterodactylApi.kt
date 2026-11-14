@@ -324,7 +324,7 @@ class PterodactylApi(private val apiKey: String) {
             addProperty("day_of_month", fields[2])
             addProperty("month", fields[3])
             addProperty("day_of_week", fields[4])
-            addProperty("is_active", true)
+            addProperty("is_active", false)
         }
         val created = JsonParser.parseString(
             request(serverPath(identifier, "schedules"), "POST", body.toString())
@@ -340,9 +340,10 @@ class PterodactylApi(private val apiKey: String) {
         }
         try {
             request(serverPath(identifier, "schedules/$scheduleId/tasks"), "POST", task.toString())
+            setScheduleActive(identifier, scheduleId, true)
         } catch (error: Exception) {
             runCatching { deleteSchedule(identifier, scheduleId) }
-            throw IllegalStateException("Nu s-a putut adăuga comanda programării: ${error.message ?: "eroare API"}. Programarea incompletă a fost eliminată.", error)
+            throw IllegalStateException("Nu s-a putut finaliza programarea: ${error.message ?: "eroare API"}. Programarea incompletă a fost eliminată.", error)
         }
     }
 
