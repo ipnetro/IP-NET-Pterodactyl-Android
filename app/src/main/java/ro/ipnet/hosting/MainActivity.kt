@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
+import androidx.compose.material3.Text as MaterialText
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +44,140 @@ import okhttp3.WebSocket
 import com.google.gson.JsonObject
 import androidx.compose.ui.window.Dialog
 
+
+private val appEnglish = mutableStateOf(false)
+private val roToEnglish = mapOf(
+    "Conectare la panou" to "Connect to panel",
+    "Introdu cheia Client API din panou." to "Enter the Client API key from the panel.",
+    "SE RESTAUREAZĂ..." to "RESTORING...",
+    "Se conectează..." to "Connecting...",
+    "CONECTARE" to "CONNECT",
+    "Conectare eșuată." to "Connection failed.",
+    "Cheia se salvează criptat pe acest telefon și se șterge când apeși IEȘIRE. La redeschidere, aplicația încearcă reconectarea automat." to "The key is stored encrypted on this phone and is deleted when you log out. The app reconnects automatically when reopened.",
+    "Serverele mele" to "My servers",
+    "REÎNCARCĂ" to "REFRESH",
+    "IEȘIRE" to "LOG OUT",
+    "NU AI SERVER-E DISPONIBILE" to "NO SERVERS AVAILABLE",
+    "ÎNCEARCĂ DIN NOU" to "TRY AGAIN",
+    "MANAGER FIȘIERE" to "FILE MANAGER",
+    "DOSAR NOU" to "NEW FOLDER",
+    "ÎNAPOI" to "BACK",
+    "DESCHIDE" to "OPEN",
+    "Dosar" to "Folder",
+    "EDITEAZĂ" to "EDIT",
+    "MAI MULT" to "MORE",
+    "ÎNCHIDE" to "CLOSE",
+    "Redenumește" to "Rename",
+    "Fișier" to "File",
+    "DESCARCĂ" to "DOWNLOAD",
+    "REDENUMIRE" to "RENAME",
+    "EXTRAGE" to "EXTRACT",
+    "ARHIVEAZĂ" to "ARCHIVE",
+    "ȘTERGE" to "DELETE",
+    "ANULEAZĂ" to "CANCEL",
+    "Confirmă ștergerea" to "Confirm deletion",
+    "ȘTERGE DEFINITIV" to "DELETE PERMANENTLY",
+    "Numele dosarului" to "Folder name",
+    "CREEAZĂ" to "CREATE",
+    "EDITOR FIȘIER" to "FILE EDITOR",
+    "SALVEAZĂ" to "SAVE",
+    "Comandă" to "Command",
+    "TRIMITE" to "SEND",
+    "Alege serverul" to "Choose server",
+    "Selectează serverul pentru \${serverPickerAction}." to "Select the server for \${serverPickerAction}.",
+    "My Servers" to "Serverele mele",
+    "Menu" to "Meniu",
+    "Log Out" to "Ieșire",
+    "MY SERVERS" to "SERVERELE MELE",
+    "INFO" to "INFO",
+    "CONSOLE" to "CONSOLĂ",
+    "FILES" to "FIȘIERE",
+    "MANAGE" to "GESTIONEAZĂ",
+    "CONTROL SERVER" to "SERVER CONTROLS",
+    "ACTUALIZEAZĂ" to "UPDATE",
+    "Nume backup (opțional)" to "Backup name (optional)",
+    "CREEAZĂ BACKUP" to "CREATE BACKUP",
+    "Numele programării" to "Schedule name",
+    "Comanda care va fi executată" to "Command to run",
+    "CREEAZĂ PROGRAMARE" to "CREATE SCHEDULE",
+    "Nume bază de date" to "Database name",
+    "ADAUGĂ BAZĂ DE DATE" to "ADD DATABASE",
+    "PAUZĂ" to "PAUSE",
+    "ACTIVEAZĂ" to "ENABLE",
+    "EXECUTĂ ACUM" to "RUN NOW",
+    "ȘTERGE BACKUP" to "DELETE BACKUP",
+    "REVOACĂ ACCESUL" to "REVOKE ACCESS",
+    "ROTEȘTE PAROLA" to "ROTATE PASSWORD",
+    "ȘTERGE BAZA" to "DELETE DATABASE",
+    "SERVER INFORMATION" to "SERVER INFORMATION",
+    "LIVE RESOURCE USAGE" to "LIVE RESOURCE USAGE",
+    "Actualizare automată la 5 secunde" to "Automatic refresh every 5 seconds.",
+    "Reconectarea la panou a eșuat." to "Reconnecting to the panel failed.",
+    "Nu pot încărca fișierele." to "Unable to load files.",
+    "Eroare: \${e.message ?: \"conectare eșuată\"}" to "Error: \${e.message ?: \"connection failed\"}",
+    "conectare eșuată" to "connection failed",
+    "Închidere consolă" to "Close console",
+    "Actualizarea serverelor a eșuat." to "Refreshing servers failed.",
+    "NU AI SERVER-E DISPONIBILE" to "NO SERVERS AVAILABLE",
+    "Comanda a eșuat." to "Command failed.",
+    "Reîncărcare eșuată" to "Refresh failed",
+    "Nu pot deschide fișierul." to "Unable to open file.",
+    "Descărcarea nu a putut fi pornită." to "Could not start download.",
+    "Redenumirea a eșuat." to "Rename failed.",
+    "Arhiva a fost extrasă." to "Archive extracted.",
+    "Extragerea arhivei a eșuat." to "Archive extraction failed.",
+    "Arhivarea a eșuat." to "Archiving failed.",
+    "Element redenumit." to "Item renamed.",
+    "Element șters." to "Item deleted.",
+    "Ștergi definitiv \${target.name}? Această acțiune nu poate fi anulată." to "Permanently delete \${target.name}? This action cannot be undone.",
+    "Ștergerea a eșuat." to "Deletion failed.",
+    "Crearea dosarului a eșuat." to "Folder creation failed.",
+    "Fișier salvat cu succes." to "File saved successfully.",
+    "Salvarea a eșuat." to "Saving failed.",
+    "Alege serverul" to "Choose server",
+    "Actualizarea programării a eșuat." to "Updating schedule failed.",
+    "Crearea backup-ului a eșuat." to "Creating backup failed.",
+    "Statisticile nu sunt disponibile." to "Statistics are unavailable.",
+    "Postul radio nu este disponibil momentan. Alege alt post sau încearcă din nou." to "The station is currently unavailable. Choose another station or try again.",
+    "Nu există elemente sau API-ul nu oferă acces la această secțiune." to "There are no items, or the API does not provide access to this section.",
+    "Acțiunea este definitivă și nu poate fi anulată." to "This action is permanent and cannot be undone.",
+    "Dosar nou" to "New folder",
+    "Numele dosarului" to "Folder name",
+    "CREEAZĂ" to "CREATE",
+    "SALVEAZĂ" to "SAVE",
+    "COMANDĂ" to "COMMAND",
+    "Actualizare automată la 5 secunde" to "Automatic refresh every 5 seconds."
+)
+private val englishToRo = roToEnglish.entries.associate { it.value to it.key }
+private fun localized(text: String): String = if (appEnglish.value) roToEnglish[text] ?: text else englishToRo[text] ?: text
+
+@Composable
+private fun Text(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    fontSize: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
+    fontStyle: androidx.compose.ui.text.font.FontStyle? = null,
+    fontWeight: FontWeight? = null,
+    fontFamily: androidx.compose.ui.text.font.FontFamily? = null,
+    letterSpacing: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
+    textDecoration: androidx.compose.ui.text.style.TextDecoration? = null,
+    textAlign: androidx.compose.ui.text.style.TextAlign? = null,
+    lineHeight: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
+    overflow: androidx.compose.ui.text.style.TextOverflow = androidx.compose.ui.text.style.TextOverflow.Clip,
+    softWrap: Boolean = true,
+    maxLines: Int = Int.MAX_VALUE,
+    minLines: Int = 1,
+    onTextLayout: (androidx.compose.ui.text.TextLayoutResult) -> Unit = {},
+    style: androidx.compose.ui.text.TextStyle = androidx.compose.material3.LocalTextStyle.current
+) {
+    MaterialText(text = localized(text), modifier = modifier, color = color, fontSize = fontSize,
+        fontStyle = fontStyle, fontWeight = fontWeight, fontFamily = fontFamily,
+        letterSpacing = letterSpacing, textDecoration = textDecoration, textAlign = textAlign,
+        lineHeight = lineHeight, overflow = overflow, softWrap = softWrap,
+        maxLines = maxLines, minLines = minLines, onTextLayout = onTextLayout, style = style)
+}
+
 private val Bg = Color(0xFF090A0D)
 private val Panel = Color(0xFF151820)
 private val Red = Color(0xFFF32643)
@@ -59,6 +194,9 @@ class MainActivity : ComponentActivity() {
 private fun IpNetApp() {
     val context = LocalContext.current
     val secureApiKeyStore = remember(context) { SecureApiKeyStore(context) }
+    val languagePrefs = remember(context) { context.getSharedPreferences("ipnet_hosting_settings", android.content.Context.MODE_PRIVATE) }
+    var englishUi by remember { mutableStateOf(languagePrefs.getBoolean("english_ui", java.util.Locale.getDefault().language.equals("en", true))) }
+    SideEffect { appEnglish.value = englishUi }
     var sessionRestored by remember { mutableStateOf(false) }
     var apiKey by remember { mutableStateOf("") }
     var menuOpen by remember { mutableStateOf(false) }
@@ -190,6 +328,7 @@ private fun IpNetApp() {
                         Text("IP-NET", color = Red, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Text("HOSTING", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
                     }
+                    TextButton(onClick = { englishUi = !englishUi; appEnglish.value = englishUi; languagePrefs.edit().putBoolean("english_ui", englishUi).apply() }) { Text(if (englishUi) "🇬🇧 EN" else "🇷🇴 RO", color = Color.White, fontSize = 12.sp) }
                     if (connected) TextButton(onClick = { menuOpen = !menuOpen }) { Text(if (menuOpen) "✕" else "☰", color = Color.White, fontSize = 28.sp) }
                 }
                 Column(
