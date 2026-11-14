@@ -40,6 +40,38 @@ jobs:
       - name: Compile Kotlin source
         run: gradle :app:compileDebugKotlin --no-daemon
 
+  signing-check:
+    name: Verify release signing secrets
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Validate keystore, alias, and passwords
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64"
+          test -n "$KEYSTORE_PASSWORD"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASSWORD"
+          KEYSTORE="$RUNNER_TEMP/ipnet-hosting-release.jks"
+          CSR="$RUNNER_TEMP/ipnet-hosting-signing-check.csr"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
+          test -s "$KEYSTORE"
+          keytool -certreq -alias "$KEY_ALIAS" -keystore "$KEYSTORE" \\
+            -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" -file "$CSR" >/dev/null
+          rm -f "$KEYSTORE" "$CSR"
+          echo "Signing keystore, alias, and passwords are valid."
+
   debug-apk:
     name: Build debug APK artifact
     if: github.ref == 'refs/heads/ipnet-hosting' || github.event_name == 'workflow_dispatch'
