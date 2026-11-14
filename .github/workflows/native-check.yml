@@ -67,8 +67,7 @@ jobs:
           CSR="$RUNNER_TEMP/ipnet-hosting-signing-check.csr"
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
           test -s "$KEYSTORE"
-          keytool -certreq -alias "$KEY_ALIAS" -keystore "$KEYSTORE" \\
-            -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" -file "$CSR" >/dev/null
+          keytool -certreq -alias "$KEY_ALIAS" -keystore "$KEYSTORE" -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" -file "$CSR" >/dev/null
           rm -f "$KEYSTORE" "$CSR"
           echo "Signing keystore, alias, and passwords are valid."
 
