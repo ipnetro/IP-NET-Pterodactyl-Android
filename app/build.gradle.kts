@@ -6,6 +6,9 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val appVersionName = providers.gradleProperty("appVersionName").orElse("1.0.0").get()
+val appVersionCode = providers.gradleProperty("appVersionCode").orElse("1").get().toInt()
+
 android {
     namespace = "ro.ipnet.hosting"
     compileSdk = 35
@@ -26,8 +29,8 @@ android {
         applicationId = "ro.ipnet.hosting"
         minSdk = 26
         targetSdk = 35
-        versionCode = providers.gradleProperty("appVersionCode").orElse("1").get().toInt()
-        versionName = providers.gradleProperty("appVersionName").orElse("1.0.0").get()
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
 
     buildTypes {
