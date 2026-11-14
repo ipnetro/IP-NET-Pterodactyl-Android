@@ -86,7 +86,7 @@ private val roToEnglish = mapOf(
     "Alege serverul" to "Choose server",
     "Selectează serverul pentru \${serverPickerAction}." to "Select the server for \${serverPickerAction}.",
     "Serverele mele" to "My Servers",
-    "Menu" to "Meniu",
+    "Meniu" to "Menu",
     "Ieșire" to "Log Out",
     "Serverele mele" to "MY SERVERS",
     "INFO" to "INFO",
