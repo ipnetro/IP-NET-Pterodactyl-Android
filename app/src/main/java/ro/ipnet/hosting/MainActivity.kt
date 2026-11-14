@@ -951,11 +951,15 @@ private fun ServerInfoDialog(server: GameServer, api: PterodactylApi, onDismiss:
                 .onSuccess { value ->
                     stats = value
                     cpuHistory.add(value.cpuPercent.toFloat().coerceIn(0f, 100f))
-                    memoryHistory.add(
-                        if (server.memory > 0) (value.memoryBytes.toFloat() / (server.memory * 1024f * 1024f) * 100f).coerceIn(0f, 100f) else 0f
-                    )
+                    if (server.memory > 0) {
+                        memoryHistory.add(
+                            (value.memoryBytes.toFloat() / (server.memory * 1024f * 1024f) * 100f).coerceIn(0f, 100f)
+                        )
+                        if (memoryHistory.size > 24) memoryHistory.removeAt(0)
+                    } else {
+                        memoryHistory.clear()
+                    }
                     if (cpuHistory.size > 24) cpuHistory.removeAt(0)
-                    if (memoryHistory.size > 24) memoryHistory.removeAt(0)
                     error = null
                 }
                 .onFailure { error = it.message ?: "Statisticile nu sunt disponibile." }
@@ -977,8 +981,8 @@ private fun ServerInfoDialog(server: GameServer, api: PterodactylApi, onDismiss:
             InfoLine("STATUS", if (server.isSuspended) "SUSPENDED" else stats?.state?.uppercase() ?: server.status?.uppercase() ?: "UNKNOWN")
             InfoLine("DESCRIPTION", server.description.ifBlank { "—" })
             InfoLine("CPU LIMIT", "${server.cpu}%")
-            InfoLine("MEMORY LIMIT", "${server.memory} MB")
-            InfoLine("DISK LIMIT", "${server.disk} MB")
+            InfoLine("MEMORY LIMIT", if (server.memory > 0) "${server.memory} MB" else "NELIMITAT")
+            InfoLine("DISK LIMIT", if (server.disk > 0) "${server.disk} MB" else "NELIMITAT")
             HorizontalDivider(color = Color(0xFF303642))
             Text("LIVE RESOURCE USAGE", color = Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             InfoLine("CPU", stats?.let { "%.1f%%".format(it.cpuPercent) } ?: "—")
