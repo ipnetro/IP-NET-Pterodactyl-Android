@@ -933,20 +933,26 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                         }
                         if (section == "BAZE DE DATE") {
                             val id = row.get("id")?.asString.orEmpty()
-                            TextButton(
-                                onClick = {
-                                    scope.launch {
-                                        runCatching { api.rotateDatabasePassword(server.identifier, id) }
-                                            .onSuccess { password ->
-                                                message = password?.let { "Parola nouă a bazei de date: $it" }
-                                                    ?: "Parola a fost rotită, dar contul nu are permisiunea de a o vizualiza."
-                                                refresh(clearMessage = false)
-                                            }
-                                            .onFailure { message = it.message ?: "Rotirea parolei a eșuat." }
-                                    }
-                                },
-                                enabled = id.isNotBlank()
-                            ) { Text("ROTEȘTE PAROLA", color = Red, fontSize = 10.sp) }
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                TextButton(
+                                    onClick = {
+                                        scope.launch {
+                                            runCatching { api.rotateDatabasePassword(server.identifier, id) }
+                                                .onSuccess { password ->
+                                                    message = password?.let { "Parola nouă a bazei de date: $it" }
+                                                        ?: "Parola a fost rotită, dar contul nu are permisiunea de a o vizualiza."
+                                                    refresh(clearMessage = false)
+                                                }
+                                                .onFailure { message = it.message ?: "Rotirea parolei a eșuat." }
+                                        }
+                                    },
+                                    enabled = id.isNotBlank() && !loading
+                                ) { Text("ROTEȘTE PAROLA", color = Red, fontSize = 10.sp) }
+                                TextButton(
+                                    onClick = { pendingDelete = "database" to id },
+                                    enabled = id.isNotBlank() && !loading
+                                ) { Text("ȘTERGE BAZA", color = Red, fontSize = 10.sp) }
+                            }
                         }
                     }
                 }
@@ -960,7 +966,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
             pendingDelete?.let { (kind, id) ->
                 AlertDialog(
                     onDismissRequest = { pendingDelete = null },
-                    title = { Text(if (kind == "backup") "Ștergi backup-ul?" else "Ștergi programarea?") },
+                    title = { Text(when (kind) { "backup" -> "Ștergi backup-ul?"; "schedule" -> "Ștergi programarea?"; else -> "Ștergi baza de date?" }) },
                     text = { Text("Acțiunea este definitivă și nu poate fi anulată.") },
                     confirmButton = {
                         TextButton(onClick = {
@@ -968,10 +974,17 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                             scope.launch {
                                 loading = true
                                 runCatching {
-                                    if (kind == "backup") api.deleteBackup(server.identifier, id)
-                                    else api.deleteSchedule(server.identifier, id)
+                                    when (kind) {
+                                        "backup" -> api.deleteBackup(server.identifier, id)
+                                        "schedule" -> api.deleteSchedule(server.identifier, id)
+                                        else -> api.deleteDatabase(server.identifier, id)
+                                    }
                                 }.onSuccess {
-                                    message = if (kind == "backup") "Backup șters." else "Programarea a fost ștearsă."
+                                    message = when (kind) {
+                                        "backup" -> "Backup șters."
+                                        "schedule" -> "Programarea a fost ștearsă."
+                                        else -> "Baza de date a fost ștearsă."
+                                    }
                                     refresh(clearMessage = false)
                                 }.onFailure {
                                     message = it.message ?: "Ștergerea a eșuat."
