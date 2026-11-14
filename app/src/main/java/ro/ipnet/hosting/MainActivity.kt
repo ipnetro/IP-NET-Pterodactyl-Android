@@ -980,7 +980,7 @@ private fun ServerInfoDialog(server: GameServer, api: PterodactylApi, onDismiss:
             HorizontalDivider(color = Color(0xFF303642))
             InfoLine("STATUS", if (server.isSuspended) "SUSPENDED" else stats?.state?.uppercase() ?: server.status?.uppercase() ?: "UNKNOWN")
             InfoLine("DESCRIPTION", server.description.ifBlank { "—" })
-            InfoLine("CPU LIMIT", "${server.cpu}%")
+            InfoLine("CPU LIMIT", if (server.cpu > 0) "${server.cpu}%" else "NELIMITAT")
             InfoLine("MEMORY LIMIT", if (server.memory > 0) "${server.memory} MB" else "NELIMITAT")
             InfoLine("DISK LIMIT", if (server.disk > 0) "${server.disk} MB" else "NELIMITAT")
             HorizontalDivider(color = Color(0xFF303642))
