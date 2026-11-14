@@ -3,7 +3,7 @@ name: IP-NET Hosting validation and final APK release
 
 on:
   push:
-    branches: [ qgs-ipnet-rebrand ]
+    branches: [ ipnet-hosting ]
     paths:
       - 'settings.gradle.kts'
       - 'build.gradle.kts'
@@ -39,7 +39,7 @@ jobs:
       - name: Compile Kotlin source only (no APK packaging)
         run: gradle :app:compileDebugKotlin --no-daemon
   build-final-apk:
-    if: contains(github.event.head_commit.message, '[build-apk]')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[build-apk]')
     runs-on: ubuntu-latest
     permissions:
       contents: write
