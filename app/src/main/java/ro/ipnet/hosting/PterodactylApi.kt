@@ -307,6 +307,10 @@ class PterodactylApi(private val apiKey: String) {
         return databasePassword(response)
     }
 
+    suspend fun deleteDatabase(identifier: String, databaseId: String) {
+        request(serverPath(identifier, "databases/$databaseId"), "DELETE")
+    }
+
     suspend fun schedules(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "schedules"))
 
     suspend fun createSchedule(identifier: String, name: String, cron: String, command: String) {
