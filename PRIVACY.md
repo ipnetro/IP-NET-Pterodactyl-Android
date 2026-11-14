@@ -6,7 +6,7 @@ IP-NET Hosting este o aplicație Android pentru administrarea serverelor din pan
 
 ## Ce date folosește aplicația
 
-Aplicația nu cere crearea unui cont separat și nu include, în codul verificat, SDK-uri de publicitate sau analiză. Cheia **Client API** introdusă de utilizator este păstrată numai în memoria aplicației pe durata sesiunii; aplicația nu o salvează în spațiul său local. Ieșirea din cont golește cheia din sesiunea curentă.
+Aplicația nu cere crearea unui cont separat și nu include, în codul verificat, SDK-uri de publicitate sau analiză. Cheia **Client API** introdusă de utilizator este salvată criptat în spațiul privat al aplicației, cu o cheie AES păstrată în Android Keystore. Aplicația nu trimite cheia către servicii de analiză. La redeschidere, aplicația încearcă reconectarea automată. Butonul **IEȘIRE** șterge cheia criptată și cheia AES din Android Keystore.
 
 Pentru funcțiile pe care le alegi, aplicația trimite cereri prin HTTPS către `ptero.ip-net.ro` folosind cheia Client API. Aceste cereri pot include operațiuni de server, comenzi de consolă, căi și conținut de fișiere ori setări pe care le modifici. Informațiile afișate — precum lista serverelor, starea și utilizarea resurselor — vin din panoul Pterodactyl. Consola folosește conexiunea WebSocket furnizată de panou.
 
@@ -18,7 +18,7 @@ Ca orice serviciu online, serverele contactate pot primi informații tehnice de 
 
 ## Păstrarea și ștergerea datelor
 
-Aplicația nu salvează cheia API sau istoricul serverelor în spațiul său local. Închiderea aplicației ori folosirea butonului de ieșire elimină cheia și datele sesiunii din memoria aplicației. Datele și jurnalele păstrate de panoul Pterodactyl sunt administrate de operatorul panoului.
+Cheia API rămâne criptată pe telefon până la folosirea butonului **IEȘIRE** sau dezinstalarea aplicației; datele aplicației sunt excluse din backup-ul Android. Închiderea aplicației păstrează cheia pentru reconectarea automată. Aplicația nu salvează istoricul serverelor ca istoric separat; datele și jurnalele păstrate de panoul Pterodactyl sunt administrate de operatorul panoului.
 
 ## Contact
 
