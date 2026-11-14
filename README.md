@@ -27,6 +27,10 @@ Aplicație Android nativă pentru administrarea serverelor din panoul Pterodacty
 
 Workflow-ul `.github/workflows/native-check.yml` verifică compilarea sursei Kotlin și nu generează APK. APK-ul va fi construit separat, după finalizarea și verificarea aplicației.
 
+## APK de instalare
+
+Versiunea 1.0.0 este publicată ca APK instalabil în secțiunea GitHub Releases.
+
 ## Build local
 
 Necesită JDK 17, Android SDK 35 și Gradle 8.9:
