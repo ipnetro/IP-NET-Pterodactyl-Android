@@ -156,7 +156,7 @@ private val englishToRo = roToEnglish.entries.associate { it.value to it.key }
 private fun localized(text: String): String {
     if (appEnglish.value) {
         roToEnglish[text]?.let { return it }
-        Regex("^(\\\\d+) server\\\\(e\\\\) disponibile$").matchEntire(text)?.let { return "${it.groupValues[1]} server(s) available" }
+        Regex("^(\\d+) server\\(e\\) disponibile$").matchEntire(text)?.let { return "${it.groupValues[1]} server(s) available" }
         if (text.startsWith("Consolă • ")) return "Console • " + text.removePrefix("Consolă • ")
         if (text.startsWith("Ștergi definitiv ") && text.endsWith("? Această acțiune nu poate fi anulată.")) {
             return "Permanently delete " + text.removePrefix("Ștergi definitiv ").removeSuffix("? Această acțiune nu poate fi anulată.") + "? This action cannot be undone."
@@ -164,7 +164,7 @@ private fun localized(text: String): String {
         return text
     }
     englishToRo[text]?.let { return it }
-    Regex("^(\\\\d+) server\\\\(s\\\\) available$").matchEntire(text)?.let { return "${it.groupValues[1]} server(e) disponibile" }
+    Regex("^(\\d+) server\\(s\\) available$").matchEntire(text)?.let { return "${it.groupValues[1]} server(e) disponibile" }
     if (text.startsWith("Console • ")) return "Consolă • " + text.removePrefix("Console • ")
     if (text.startsWith("Permanently delete ") && text.endsWith("? This action cannot be undone.")) {
         return "Ștergi definitiv " + text.removePrefix("Permanently delete ").removeSuffix("? This action cannot be undone.") + "? Această acțiune nu poate fi anulată."
