@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -80,6 +81,10 @@ private fun IpNetApp() {
     var renameValue by remember { mutableStateOf("") }
     var consoleCommand by remember { mutableStateOf("") }
     val consoleLines = remember { mutableStateListOf<String>() }
+    val consoleListState = rememberLazyListState()
+    LaunchedEffect(consoleLines.size, consoleLines.lastOrNull()) {
+        if (consoleLines.isNotEmpty()) consoleListState.animateScrollToItem(consoleLines.lastIndex)
+    }
     var consoleSocket by remember { mutableStateOf<WebSocket?>(null) }
     val latestConsoleSocket by rememberUpdatedState(consoleSocket)
     val scope = rememberCoroutineScope()
@@ -504,7 +509,7 @@ private fun IpNetApp() {
                                 Text("Consolă • ${consoleServer!!.name}", fontWeight = FontWeight.Bold, color = Color.White)
                                 Spacer(Modifier.height(8.dp))
                                 Column(Modifier.fillMaxWidth().height(280.dp).background(Bg, RoundedCornerShape(8.dp)).padding(8.dp)) {
-                                    LazyColumn(Modifier.fillMaxSize()) {
+                                    LazyColumn(state = consoleListState, modifier = Modifier.fillMaxSize()) {
                                         items(consoleLines) { line -> Text(line, color = Color(0xFFB8C0CC), fontSize = 10.sp) }
                                     }
                                 }
