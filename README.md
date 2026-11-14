@@ -38,4 +38,4 @@ Necesită JDK 17, Android SDK 35 și Gradle 8.9:
 gradle :app:assembleDebug
 ```
 
-Aceasta este o implementare Android nativă independentă, care folosește API-ul Pterodactyl; nu împachetează aplicația QGS și nu include cod proprietar QGS.
+Aplicația este implementată nativ în Kotlin și Jetpack Compose și folosește API-ul Pterodactyl.
