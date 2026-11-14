@@ -85,6 +85,7 @@ private fun IpNetApp() {
         apiKey = ""
         servers = emptyList()
         menuOpen = false
+        serverPickerAction = null
         consoleServer = null
         infoServer = null
         filesServer = null
@@ -550,7 +551,7 @@ private fun ServerCard(server: GameServer, busy: Boolean, api: PterodactylApi?, 
     LaunchedEffect(server.identifier, api) {
         while (api != null) {
             runCatching { api.resourceStats(server.identifier) }.onSuccess { stats = it }
-            delay(5_000)
+            delay(10_000)
         }
     }
     val liveState = stats?.state ?: server.status
