@@ -1,8 +1,10 @@
 package ro.ipnet.hosting
 
 import android.os.Bundle
-import android.content.Intent
+import android.app.DownloadManager
 import android.net.Uri
+import android.os.Environment
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -347,7 +349,15 @@ private fun IpNetApp() {
                                                 runCatching {
                                                     val path = if (fileDirectory == "/") "/${target.name}" else "$fileDirectory/${target.name}"
                                                     val url = client.signedFileDownload(selected.identifier, path)
-                                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                                    val fileName = path.substringAfterLast('/').ifBlank { "download" }
+                                                    val download = DownloadManager.Request(Uri.parse(url))
+                                                        .setTitle(fileName)
+                                                        .setDescription("Descărcare din IP-NET Hosting")
+                                                        .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                                        .setAllowedOverMetered(true)
+                                                        .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                                                    context.getSystemService(DownloadManager::class.java).enqueue(download)
+                                                    Toast.makeText(context, "Descărcarea a început: $fileName", Toast.LENGTH_SHORT).show()
                                                 }.onFailure { filesError = it.message ?: "Descărcarea nu a putut fi pornită." }
                                             }
                                         }) { Text("DESCARCĂ", color = Color(0xFF55D68B), fontSize = 10.sp) }
