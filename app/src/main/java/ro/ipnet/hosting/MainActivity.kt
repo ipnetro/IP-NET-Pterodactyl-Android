@@ -163,7 +163,7 @@ private fun IpNetApp() {
                         Text("IP-NET", color = Red, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Text("HOSTING", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
                     }
-                    TextButton(onClick = { menuOpen = !menuOpen }) { Text(if (menuOpen) "✕" else "☰", color = Color.White, fontSize = 28.sp) }
+                    if (connected) TextButton(onClick = { menuOpen = !menuOpen }) { Text(if (menuOpen) "✕" else "☰", color = Color.White, fontSize = 28.sp) }
                 }
                 Column(
                     Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 14.dp)
@@ -262,7 +262,7 @@ private fun IpNetApp() {
                     } else {
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(servers, key = { it.identifier }) { server ->
-                                ServerCard(server, busy, api, onInfo = { infoServer = server }, onConsole = { consoleServer = server }, onFiles = { filesServer = server; fileDirectory = "/" }, onManage = { managementServer = server }, onPower = { action ->
+                                ServerCard(server, busy, api, onInfo = { infoServer = server }, onConsole = { consoleServer = server }, onFiles = { filesServer = server; fileDirectory = "/" }, onManage = { managementSection = "BACKUP-URI"; managementServer = server }, onPower = { action ->
                                     scope.launch {
                                         busy = true; error = null
                                         try {
@@ -571,7 +571,7 @@ private fun IpNetApp() {
                                             "NETWORK" -> if (selected != null) { managementSection = "REȚEA"; managementServer = selected }
                                         }
                                     }
-                                }, modifier = Modifier.fillMaxWidth()) { Text(item, color = Color.White, modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.SemiBold) }
+                                }, enabled = item == "MY SERVERS" || servers.isNotEmpty(), modifier = Modifier.fillMaxWidth()) { Text(item, color = Color.White, modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.SemiBold) }
                             }
                         }
                     }
@@ -1052,7 +1052,7 @@ private fun ServerInfoDialog(server: GameServer, api: PterodactylApi, onDismiss:
     Dialog(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().fillMaxHeight(0.84f)
-                .background(Panel, RoundedCornerShape(18.dp)).padding(18.dp),
+                .background(Panel, RoundedCornerShape(18.dp)).padding(18.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(9.dp)
         ) {
             Text("SERVER INFORMATION", color = Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -1075,7 +1075,7 @@ private fun ServerInfoDialog(server: GameServer, api: PterodactylApi, onDismiss:
             if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
             error?.let { Text(it, color = Color(0xFFFF687D), fontSize = 11.sp) }
             Text("Actualizare automată la 5 secunde", color = Muted, fontSize = 10.sp)
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(8.dp))
             TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("CLOSE", color = Red) }
         }
     }
