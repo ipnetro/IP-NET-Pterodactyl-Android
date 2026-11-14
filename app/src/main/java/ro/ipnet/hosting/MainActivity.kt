@@ -596,6 +596,7 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
     var scheduleName by remember { mutableStateOf("") }
     var scheduleCron by remember { mutableStateOf("*/5 * * * *") }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     fun refresh() {
         scope.launch {
@@ -742,16 +743,29 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                         }
                         if (section == "BACKUP-URI") {
                             val id = row.get("uuid")?.asString.orEmpty()
-                            TextButton(
-                                onClick = {
-                                    scope.launch {
-                                        runCatching { api.deleteBackup(server.identifier, id) }
-                                            .onSuccess { message = "Backup șters."; refresh() }
-                                            .onFailure { message = it.message ?: "Ștergerea a eșuat." }
-                                    }
-                                },
-                                enabled = id.isNotBlank()
-                            ) { Text("ȘTERGE BACKUP", color = Red, fontSize = 10.sp) }
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                TextButton(
+                                    onClick = {
+                                        scope.launch {
+                                            runCatching {
+                                                val url = api.signedBackupDownload(server.identifier, id)
+                                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                            }.onFailure { message = it.message ?: "Descărcarea backup-ului a eșuat." }
+                                        }
+                                    },
+                                    enabled = id.isNotBlank()
+                                ) { Text("DESCARCĂ", color = Color(0xFF55D68B), fontSize = 10.sp) }
+                                TextButton(
+                                    onClick = {
+                                        scope.launch {
+                                            runCatching { api.deleteBackup(server.identifier, id) }
+                                                .onSuccess { message = "Backup șters."; refresh() }
+                                                .onFailure { message = it.message ?: "Ștergerea a eșuat." }
+                                        }
+                                    },
+                                    enabled = id.isNotBlank()
+                                ) { Text("ȘTERGE BACKUP", color = Red, fontSize = 10.sp) }
+                            }
                         }
                         if (section == "BAZE DE DATE") {
                             val id = row.get("id")?.asString.orEmpty()
