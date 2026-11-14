@@ -54,6 +54,7 @@ private fun IpNetApp() {
     val context = LocalContext.current
     var apiKey by remember { mutableStateOf("") }
     var menuOpen by remember { mutableStateOf(false) }
+    var serverPickerAction by remember { mutableStateOf<String?>(null) }
     var connected by remember { mutableStateOf(false) }
     var servers by remember { mutableStateOf<List<GameServer>>(emptyList()) }
     var busy by remember { mutableStateOf(false) }
@@ -476,21 +477,65 @@ private fun IpNetApp() {
                             listOf("MY SERVERS", "CONSOLE", "FILE MANAGER", "DATABASES", "SCHEDULES", "ACCESS CONTROL", "BACKUPS", "NETWORK").forEach { item ->
                                 TextButton(onClick = {
                                     menuOpen = false
-                                    val selected = servers.firstOrNull()
-                                    when (item) {
-                                        "MY SERVERS" -> Unit
-                                        "CONSOLE" -> if (selected != null) consoleServer = selected
-                                        "FILE MANAGER" -> if (selected != null) { filesServer = selected; fileDirectory = "/" }
-                                        "DATABASES" -> if (selected != null) { managementSection = "BAZE DE DATE"; managementServer = selected }
-                                        "SCHEDULES" -> if (selected != null) { managementSection = "SCHEDULES"; managementServer = selected }
-                                        "ACCESS CONTROL" -> if (selected != null) { managementSection = "UTILIZATORI"; managementServer = selected }
-                                        "BACKUPS" -> if (selected != null) { managementSection = "BACKUP-URI"; managementServer = selected }
-                                        "NETWORK" -> if (selected != null) { managementSection = "REȚEA"; managementServer = selected }
+                                    if (item == "MY SERVERS") {
+                                        serverPickerAction = null
+                                    } else if (servers.size > 1) {
+                                        serverPickerAction = item
+                                    } else {
+                                        val selected = servers.firstOrNull()
+                                        when (item) {
+                                            "CONSOLE" -> if (selected != null) consoleServer = selected
+                                            "FILE MANAGER" -> if (selected != null) { filesServer = selected; fileDirectory = "/" }
+                                            "DATABASES" -> if (selected != null) { managementSection = "BAZE DE DATE"; managementServer = selected }
+                                            "SCHEDULES" -> if (selected != null) { managementSection = "SCHEDULES"; managementServer = selected }
+                                            "ACCESS CONTROL" -> if (selected != null) { managementSection = "UTILIZATORI"; managementServer = selected }
+                                            "BACKUPS" -> if (selected != null) { managementSection = "BACKUP-URI"; managementServer = selected }
+                                            "NETWORK" -> if (selected != null) { managementSection = "REȚEA"; managementServer = selected }
+                                        }
                                     }
                                 }, modifier = Modifier.fillMaxWidth()) { Text(item, color = Color.White, modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.SemiBold) }
                             }
                         }
                     }
+                }
+                if (serverPickerAction != null) {
+                    AlertDialog(
+                        onDismissRequest = { serverPickerAction = null },
+                        title = { Text("Alege serverul") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("Selectează serverul pentru ${serverPickerAction}.", color = Muted, fontSize = 12.sp)
+                                servers.forEach { server ->
+                                    TextButton(
+                                        onClick = {
+                                            when (serverPickerAction) {
+                                                "CONSOLE" -> consoleServer = server
+                                                "FILE MANAGER" -> { filesServer = server; fileDirectory = "/" }
+                                                "DATABASES" -> { managementSection = "BAZE DE DATE"; managementServer = server }
+                                                "SCHEDULES" -> { managementSection = "SCHEDULES"; managementServer = server }
+                                                "ACCESS CONTROL" -> { managementSection = "UTILIZATORI"; managementServer = server }
+                                                "BACKUPS" -> { managementSection = "BACKUP-URI"; managementServer = server }
+                                                "NETWORK" -> { managementSection = "REȚEA"; managementServer = server }
+                                            }
+                                            serverPickerAction = null
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(Modifier.fillMaxWidth()) {
+                                            Text(server.name, color = Color.White, fontWeight = FontWeight.Bold)
+                                            Text(server.identifier, color = Muted, fontSize = 10.sp)
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { serverPickerAction = null }) { Text("ANULEAZĂ", color = Red) }
+                        },
+                        containerColor = Panel,
+                        titleContentColor = Color.White,
+                        textContentColor = Color.White
+                    )
                 }
 
             }
