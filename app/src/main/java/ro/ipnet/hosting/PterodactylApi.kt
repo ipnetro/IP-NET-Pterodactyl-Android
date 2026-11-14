@@ -296,9 +296,10 @@ class PterodactylApi(private val apiKey: String) {
 
     suspend fun schedules(identifier: String): List<JsonObject> = dataList(serverPath(identifier, "schedules"))
 
-    suspend fun createSchedule(identifier: String, name: String, cron: String) {
+    suspend fun createSchedule(identifier: String, name: String, cron: String, command: String) {
         val fields = cron.trim().split(Regex("\\s+"))
         require(fields.size == 5) { "Programul trebuie să aibă 5 câmpuri cron: minută oră zi-lună lună zi-săptămână." }
+        require(command.isNotBlank()) { "Introdu comanda care trebuie executată de programare." }
         val body = JsonObject().apply {
             addProperty("name", name)
             addProperty("minute", fields[0])
@@ -308,7 +309,24 @@ class PterodactylApi(private val apiKey: String) {
             addProperty("day_of_week", fields[4])
             addProperty("is_active", true)
         }
-        request(serverPath(identifier, "schedules"), "POST", body.toString())
+        val created = JsonParser.parseString(
+            request(serverPath(identifier, "schedules"), "POST", body.toString())
+        ).asJsonObject
+        val scheduleId = created.getAsJsonObject("attributes")
+            ?.get("id")?.takeUnless { it.isJsonNull }?.asString
+            ?: throw IllegalStateException("Programarea a fost creată, dar panoul nu a returnat ID-ul necesar pentru comandă.")
+        val task = JsonObject().apply {
+            addProperty("action", "command")
+            addProperty("payload", command.trim())
+            addProperty("time_in_seconds", 0)
+            addProperty("sequence_id", 1)
+        }
+        try {
+            request(serverPath(identifier, "schedules/$scheduleId/tasks"), "POST", task.toString())
+        } catch (error: Exception) {
+            runCatching { deleteSchedule(identifier, scheduleId) }
+            throw IllegalStateException("Nu s-a putut adăuga comanda programării: ${error.message ?: "eroare API"}. Programarea incompletă a fost eliminată.", error)
+        }
     }
 
     suspend fun deleteSchedule(identifier: String, scheduleId: String) {
