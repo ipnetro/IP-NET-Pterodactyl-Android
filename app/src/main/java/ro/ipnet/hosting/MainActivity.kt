@@ -81,6 +81,7 @@ private fun IpNetApp() {
     var consoleCommand by remember { mutableStateOf("") }
     val consoleLines = remember { mutableStateListOf<String>() }
     var consoleSocket by remember { mutableStateOf<WebSocket?>(null) }
+    val latestConsoleSocket by rememberUpdatedState(consoleSocket)
     val scope = rememberCoroutineScope()
     val logout = {
         connected = false
@@ -131,7 +132,7 @@ private fun IpNetApp() {
         } else null
         onDispose {
             job?.cancel()
-            consoleSocket?.close(1000, "Închidere consolă")
+            latestConsoleSocket?.close(1000, "Închidere consolă")
             consoleSocket = null
         }
     }
