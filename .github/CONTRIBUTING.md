@@ -23,3 +23,9 @@ For IP-NET Hosting, test only on servers you are authorized to manage. Hide user
 
 Înainte să trimiți un pull request cu modificări de cod, deschide un issue și discută propunerea cu întreținătorul proiectului. Codul și aplicația sunt proprietare; nu trimite cod sau materiale pentru care nu ai dreptul să acorzi permisiunea de utilizare.  
 Before opening a pull request with code changes, create an issue and discuss the proposal with the maintainer. The app and source code are proprietary; do not submit code or materials unless you have the right to grant permission to use them.
+
+## Limba codului și a interfeței / Code and interface languages
+
+Identificatorii din cod (numele funcțiilor și variabilelor) rămân în engleză pentru a fi ușor de folosit de dezvoltatori din alte țări. Poți scrie comentarii explicative, rapoarte și propuneri în română sau engleză. Interfața aplicației poate fi aleasă de utilizator în română sau engleză.
+
+Code identifiers, such as function and variable names, stay in English so developers from other countries can work with them easily. You may write explanatory comments, reports, and proposals in Romanian or English. App users can choose Romanian or English for the interface.
