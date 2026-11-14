@@ -146,7 +146,7 @@ class PterodactylApi(private val apiKey: String) {
         onLine: (String) -> Unit,
         onClosed: (String) -> Unit
     ): WebSocket {
-        val wsClient = client.newBuilder().readTimeout(0, TimeUnit.MILLISECONDS).build()
+        val wsClient = client.newBuilder().readTimeout(0, TimeUnit.MILLISECONDS).pingInterval(25, TimeUnit.SECONDS).build()
         val request = Request.Builder()
             .url(credentials.socket)
             .header("Origin", baseUrl)
