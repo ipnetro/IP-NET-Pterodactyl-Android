@@ -1,41 +1,42 @@
-name: Idee sau funcție nouă
-description: Propune o îmbunătățire pentru aplicație / Suggest an improvement
-title: "[Idee] "
+name: Feature idea / Idee sau funcție nouă
+description: Suggest an improvement / Propune o îmbunătățire
+title: "[Idea] "
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        Spune-ne ce ți-ar fi util. Nu include date de cont, parole sau chei API.
+        **Română:** Spune-ne ce ți-ar fi util. Nu include date de cont, parole sau chei API.
+        **English:** Tell us what would be useful to you. Do not include account details, passwords, or API keys.
   - type: textarea
     id: problem
     attributes:
-      label: Ce ai vrea să poți face?
-      description: Explică nevoia sau problema pe care o întâmpini.
-      placeholder: Mi-ar fi util să pot...
+      label: What would you like to do? / Ce ai vrea să poți face?
+      description: Explain the need or problem you have. / Explică nevoia sau problema pe care o întâmpini.
+      placeholder: It would be useful if I could... / Mi-ar fi util să pot...
     validations:
       required: true
   - type: textarea
     id: solution
     attributes:
-      label: Cum ar funcționa îmbunătățirea?
-      description: Poți descrie un exemplu de utilizare.
+      label: How could this improvement work? / Cum ar funcționa îmbunătățirea?
+      description: Describe an example use case. / Descrie un exemplu de utilizare.
     validations:
       required: false
   - type: dropdown
     id: importance
     attributes:
-      label: Cât de importantă este pentru tine?
+      label: How important is this to you? / Cât de importantă este pentru tine?
       options:
-        - Foarte importantă
-        - Utilă
-        - Doar o idee
+        - Very important / Foarte importantă
+        - Useful / Utilă
+        - Just an idea / Doar o idee
     validations:
       required: true
   - type: input
     id: context
     attributes:
-      label: Telefon și versiune aplicație (opțional)
-      placeholder: De exemplu, Android 15 / ultima versiune IP-NET Hosting
+      label: Phone and app version (optional) / Telefon și versiune aplicație (opțional)
+      placeholder: For example / De exemplu: Android 15 / IP-NET Hosting 1.0.1
     validations:
       required: false
