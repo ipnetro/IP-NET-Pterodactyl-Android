@@ -38,6 +38,7 @@ IP-NET Hosting is a native Android app built with Kotlin and Jetpack Compose for
 - Create and manage scheduled tasks.
 - View users and revoke subuser access.
 - View network allocations.
+- Choose Romanian or English for the app interface; your choice is saved on the phone.
 
 ### Secure connection
 
@@ -120,6 +121,7 @@ IP-NET Hosting este o aplicație Android nativă, construită cu Kotlin și Jetp
 - Crearea și gestionarea programărilor automate.
 - Vizualizarea utilizatorilor și revocarea accesului subutilizatorilor.
 - Vizualizarea alocărilor de rețea.
+- Alege limba interfeței, română sau engleză; alegerea se salvează pe telefon.
 
 ### Conectare securizată
 
