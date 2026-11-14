@@ -38,7 +38,7 @@ jobs:
       - name: Verify APK and prepare release file
         shell: bash
         run: |
-          VERSION="${GITHUB_REF_NAME#ipnet-hosting-v}"
+          VERSION="1.0.0"
           APK="IP-NET-Hosting-${VERSION}.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "$APK"
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
