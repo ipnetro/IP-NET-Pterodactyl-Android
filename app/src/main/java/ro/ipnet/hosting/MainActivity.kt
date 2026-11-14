@@ -221,18 +221,46 @@ private fun IpNetApp() {
                     }
                     Spacer(Modifier.height(12.dp))
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(servers, key = { it.identifier }) { server ->
-                            ServerCard(server, busy, api, onInfo = { infoServer = server }, onConsole = { consoleServer = server }, onFiles = { filesServer = server; fileDirectory = "/" }, onManage = { managementServer = server }, onPower = { action ->
-                                scope.launch {
-                                    busy = true; error = null
-                                    try {
-                                        api?.power(server.identifier, action)
-                                        servers = api?.servers().orEmpty()
-                                    } catch (e: Exception) { error = e.message ?: "Comanda a eșuat." }
-                                    finally { busy = false }
-                                }
-                            })
+                    if (servers.isEmpty() && !busy) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(vertical = 36.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("NU AI SERVER-E DISPONIBILE", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Contul Client API nu are servere accesibile. Verifică utilizatorul și permisiunile din panoul Pterodactyl.",
+                                color = Muted, fontSize = 12.sp
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    val client = api
+                                    if (client != null) scope.launch {
+                                        busy = true
+                                        error = null
+                                        try { servers = client.servers() }
+                                        catch (e: Exception) { error = e.message ?: "Actualizarea serverelor a eșuat." }
+                                        finally { busy = false }
+                                    }
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)
+                            ) { Text("ÎNCEARCĂ DIN NOU") }
+                        }
+                    } else {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(servers, key = { it.identifier }) { server ->
+                                ServerCard(server, busy, api, onInfo = { infoServer = server }, onConsole = { consoleServer = server }, onFiles = { filesServer = server; fileDirectory = "/" }, onManage = { managementServer = server }, onPower = { action ->
+                                    scope.launch {
+                                        busy = true; error = null
+                                        try {
+                                            api?.power(server.identifier, action)
+                                            servers = api?.servers().orEmpty()
+                                        } catch (e: Exception) { error = e.message ?: "Comanda a eșuat." }
+                                        finally { busy = false }
+                                    }
+                                })
+                            }
                         }
                     }
                     if (infoServer != null) ServerInfoDialog(infoServer!!, api!!, onDismiss = { infoServer = null })
