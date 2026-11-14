@@ -1,52 +1,53 @@
-name: Raportare problemă
-description: Spune-ne ce nu funcționează în aplicație / Report a bug
+name: Bug / Problemă
+description: Report a problem in the app / Raportează o problemă în aplicație
 title: "[Bug] "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Nu include parole, chei API, coduri de autentificare sau date private. Pentru probleme de securitate, urmează SECURITY.md și nu folosi acest formular public.
+        **Română:** Nu include parole, chei API, coduri de autentificare sau date private. Pentru probleme de securitate, urmează SECURITY.md și nu folosi acest formular public.
+        **English:** Do not include passwords, API keys, authentication codes, or private data. For security issues, follow SECURITY.md and do not use this public form.
   - type: textarea
     id: summary
     attributes:
-      label: Ce s-a întâmplat?
-      description: Descrie pe scurt problema.
-      placeholder: Aplicația se închide când...
+      label: What happened? / Ce s-a întâmplat?
+      description: Describe the problem briefly. / Descrie pe scurt problema.
+      placeholder: The app closes when... / Aplicația se închide când...
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: Pași pentru reproducere
-      description: Scrie pașii în ordine.
-      placeholder: "1. Deschid aplicația…\n2. Apăs…\n3. Apare problema…"
+      label: Steps to reproduce / Pași pentru reproducere
+      description: List the steps in order. / Scrie pașii în ordine.
+      placeholder: "1. Open the app / Deschid aplicația…\n2. Tap… / Apăs…\n3. The problem appears / Apare problema…"
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
-      label: Ce te așteptai să se întâmple?
+      label: What did you expect to happen? / Ce te așteptai să se întâmple?
     validations:
       required: true
   - type: input
     id: app-version
     attributes:
-      label: Versiunea aplicației
-      placeholder: De exemplu, 1.0.1
+      label: App version / Versiunea aplicației
+      placeholder: For example / De exemplu: 1.0.1
     validations:
       required: true
   - type: input
     id: device
     attributes:
-      label: Telefon și versiune Android
-      placeholder: De exemplu, Pixel 8 / Android 15
+      label: Phone and Android version / Telefon și versiune Android
+      placeholder: For example / De exemplu: Pixel 8 / Android 15
     validations:
       required: false
   - type: textarea
     id: logs
     attributes:
-      label: Alte detalii (fără secrete)
-      description: Elimină nume de utilizator, adrese private, tokenuri și chei înainte de a lipi jurnale sau de a atașa capturi.
+      label: Other details (no secrets) / Alte detalii (fără secrete)
+      description: Remove usernames, private addresses, tokens, and keys from logs or screenshots. / Elimină nume de utilizator, adrese private, tokenuri și chei din jurnale sau capturi.
     validations:
       required: false
