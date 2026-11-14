@@ -39,7 +39,6 @@ jobs:
       - name: Compile Kotlin source only (no APK packaging)
         run: gradle :app:compileDebugKotlin --no-daemon
   build-final-apk:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[build-apk]')
     runs-on: ubuntu-latest
     permissions:
       contents: write
