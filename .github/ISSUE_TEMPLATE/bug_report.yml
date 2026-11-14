@@ -1,0 +1,52 @@
+name: Raportare problemă
+description: Spune-ne ce nu funcționează în aplicație / Report a bug
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Nu include parole, chei API, coduri de autentificare sau date private. Pentru probleme de securitate, urmează SECURITY.md și nu folosi acest formular public.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Ce s-a întâmplat?
+      description: Descrie pe scurt problema.
+      placeholder: Aplicația se închide când...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pași pentru reproducere
+      description: Scrie pașii în ordine.
+      placeholder: "1. Deschid aplicația…\n2. Apăs…\n3. Apare problema…"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ce te așteptai să se întâmple?
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: Versiunea aplicației
+      placeholder: De exemplu, 1.0.1
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Telefon și versiune Android
+      placeholder: De exemplu, Pixel 8 / Android 15
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Alte detalii (fără secrete)
+      description: Elimină nume de utilizator, adrese private, tokenuri și chei înainte de a lipi jurnale sau de a atașa capturi.
+    validations:
+      required: false
