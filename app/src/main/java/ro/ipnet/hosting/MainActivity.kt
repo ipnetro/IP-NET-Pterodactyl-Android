@@ -383,7 +383,7 @@ private fun IpNetApp() {
                                                 .onFailure { filesError = it.message ?: "Redenumirea a eșuat." }
                                             fileActionTarget = null
                                         }
-                                    }) { Text("REDENUMIRE", color = Red) }
+                                    }, enabled = renameValue.trim().isNotBlank() && renameValue.trim() != target.name) { Text("REDENUMIRE", color = Red) }
                                     if (target.isFile && target.name.substringAfterLast('.', "").lowercase() in setOf("zip", "tar", "gz")) {
                                         TextButton(onClick = {
                                             val selected = filesServer
@@ -470,7 +470,7 @@ private fun IpNetApp() {
                                         folderName = ""
                                         folderDialog = false
                                     }
-                                }) { Text("CREEAZĂ", color = Red) }
+                                }, enabled = folderName.trim().isNotBlank()) { Text("CREEAZĂ", color = Red) }
                             },
                             dismissButton = { TextButton(onClick = { folderDialog = false }) { Text("ANULEAZĂ") } },
                             containerColor = Panel,
@@ -527,7 +527,7 @@ private fun IpNetApp() {
                                             consoleSocket?.send(payload.toString())
                                             consoleCommand = ""
                                         }
-                                    }, enabled = consoleSocket != null,
+                                    }, enabled = consoleSocket != null && consoleCommand.isNotBlank(),
                                         colors = ButtonDefaults.buttonColors(containerColor = Red)) { Text("TRIMITE") }
                                 }
                                 TextButton(onClick = { consoleServer = null; consoleCommand = "" }, modifier = Modifier.align(Alignment.End)) { Text("ÎNCHIDE", color = Red) }
