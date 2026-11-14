@@ -833,7 +833,15 @@ private fun ManagementDialog(server: GameServer, api: PterodactylApi, initialSec
                                         scope.launch {
                                             runCatching {
                                                 val url = api.signedBackupDownload(server.identifier, id)
-                                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                                val fileName = "backup-$id.tar.gz"
+                                                val download = DownloadManager.Request(Uri.parse(url))
+                                                    .setTitle(fileName)
+                                                    .setDescription("Descărcare backup din IP-NET Hosting")
+                                                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                                    .setAllowedOverMetered(true)
+                                                    .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                                                context.getSystemService(DownloadManager::class.java).enqueue(download)
+                                                Toast.makeText(context, "Descărcarea backup-ului a început.", Toast.LENGTH_SHORT).show())
                                             }.onFailure { message = it.message ?: "Descărcarea backup-ului a eșuat." }
                                         }
                                     },
